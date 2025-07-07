@@ -78,16 +78,13 @@ const QUESTIONS = [
     description: "Can't stop at just one episode/movie!"
   },
 ]
-
+ 
 export default function QuizFlow({ onComplete }) {
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState({})
 
   const current = QUESTIONS[step]
   const total = QUESTIONS.length
-
-  // Debug logging
-  console.log('QuizFlow rendered:', { step, total, current: current?.id, answers })
 
   function handleAnswer(val) {
     console.log('handleAnswer called:', { val, step, current: current?.id })
