@@ -74,7 +74,7 @@ const QUESTIONS = [
   {
     id: 'binge',
     text: 'Are you a binge-watcher?',
-    emoji: '��',
+    emoji: '🍿',
     description: "Can't stop at just one episode/movie!"
   },
 ]
@@ -86,10 +86,15 @@ export default function QuizFlow({ onComplete }) {
   const current = QUESTIONS[step]
   const total = QUESTIONS.length
 
+  // Debug logging
+  console.log('QuizFlow rendered:', { step, total, current: current?.id, answers })
+
   function handleAnswer(val) {
+    console.log('handleAnswer called:', { val, step, current: current?.id })
     if (step === total - 1) {
       setAnswers(a => {
         const next = { ...a, [current.id]: val };
+        console.log('Quiz completed, calling onComplete with:', next);
         onComplete(next);
         return next;
       });

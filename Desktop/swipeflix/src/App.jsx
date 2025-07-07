@@ -66,6 +66,7 @@ export default function App() {
   const [selectedPlatforms, setSelectedPlatforms] = useState([]);
 
   const handleQuizComplete = (answers) => {
+    console.log('handleQuizComplete called with:', answers);
     setQuizAnswers(answers);
     setShowQuiz(false);
     setIsLoading(true); // Immediately enter loading state
@@ -180,6 +181,7 @@ export default function App() {
   useEffect(() => {
     if (showQuiz) return;
     const key = import.meta.env.VITE_TMDB_API_KEY;
+    console.log('API Key available:', !!key, 'Key length:', key?.length);
     if (!key) {
       setError('Missing TMDB API key');
       return;
