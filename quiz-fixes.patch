@@ -1,0 +1,639 @@
+diff --git a/Desktop/swipeflix/src/App.jsx b/Desktop/swipeflix/src/App.jsx
+index b75fb4fd..db662721 100644
+--- a/Desktop/swipeflix/src/App.jsx
++++ b/Desktop/swipeflix/src/App.jsx
+@@ -67,6 +67,8 @@ export default function App() {
+ 
+   const handleQuizComplete = (answers) => {
+     console.log('handleQuizComplete called with:', answers);
++    console.log('API Key available:', !!import.meta.env.VITE_TMDB_API_KEY);
++    console.log('API Key length:', import.meta.env.VITE_TMDB_API_KEY?.length);
+     setQuizAnswers(answers);
+     setShowQuiz(false);
+     setIsLoading(true); // Immediately enter loading state
+diff --git a/Desktop/swipeflix/src/SwipeCard.jsx b/Desktop/swipeflix/src/SwipeCard.jsx
+index 1ff36432..a6c7f4e3 100644
+--- a/Desktop/swipeflix/src/SwipeCard.jsx
++++ b/Desktop/swipeflix/src/SwipeCard.jsx
+@@ -23,7 +23,7 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
+   }, [isTopCard, controls]);
+ 
+   const handleTap = (e) => {
+-    if (!isTopCard) return; 
++    if (!isTopCard) return;
+ 
+     const { clientX, currentTarget } = e;
+     if (!currentTarget) return;
+@@ -279,8 +279,8 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
+                 </span>
+               );
+             })}
+-          </div>
+-        )}
++        </div>
++      )}
+       </div>
+     </motion.div>
+   );
+diff --git a/Desktop/swipeflix/src/quizflow.jsx b/Desktop/swipeflix/src/quizflow.jsx
+index efe74498..53899aa6 100644
+--- a/Desktop/swipeflix/src/quizflow.jsx
++++ b/Desktop/swipeflix/src/quizflow.jsx
+@@ -1,4 +1,4 @@
+-import { useState } from 'react'
++import { useState, useEffect } from 'react'
+ import { motion, AnimatePresence } from 'framer-motion'
+ 
+ const QUESTIONS = [
+@@ -23,14 +23,14 @@ const QUESTIONS = [
+     ],
+     description: 'Pick all that you have access to!'
+   },
+-  {
+-    id: 'action',
++  { 
++    id: 'action',  
+     text: 'Do you crave high-octane action?',
+     emoji: '💥',
+     description: 'Explosions, car chases, epic battles'
+   },
+-  {
+-    id: 'romance',
++  { 
++    id: 'romance', 
+     text: 'Love a swoony romance subplot?',
+     emoji: '💕',
+     description: 'Love stories, emotional connections'
+@@ -41,20 +41,20 @@ const QUESTIONS = [
+     emoji: '😂',
+     description: 'Humor, witty dialogue, funny situations'
+   },
+-  {
+-    id: 'sci-fi',
++  { 
++    id: 'sci-fi',  
+     text: 'Fascinated by futuristic sci-fi worlds?',
+     emoji: '🚀',
+     description: 'Space, technology, alternate realities'
+   },
+-  {
+-    id: 'horror',
++  { 
++    id: 'horror',  
+     text: 'Enjoy a spine-tingling scare?',
+     emoji: '👻',
+     description: 'Suspense, thrills, supernatural elements'
+   },
+-  {
+-    id: 'drama',
++  { 
++    id: 'drama',   
+     text: 'Appreciate deep, emotional storytelling?',
+     emoji: '🎭',
+     description: 'Character development, complex narratives'
+@@ -78,26 +78,64 @@ const QUESTIONS = [
+     description: "Can't stop at just one episode/movie!"
+   },
+ ]
+- 
++
+ export default function QuizFlow({ onComplete }) {
+   const [step, setStep] = useState(0)
+   const [answers, setAnswers] = useState({})
++  const [error, setError] = useState(null)
++
++  // Add error boundary
++  if (error) {
++    return (
++      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#232946] to-[#6c3fa7] p-4">
++        <div className="w-full max-w-md mx-auto rounded-3xl bg-white/10 shadow-2xl p-8 flex flex-col items-center">
++          <div className="text-2xl mb-4">⚠️</div>
++          <div className="text-xl font-bold text-white mb-2">Something went wrong</div>
++          <div className="text-white/80 mb-4 text-center">{error}</div>
++          <button 
++            className="px-6 py-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white font-bold"
++            onClick={() => window.location.reload()}
++          >
++            Reload Page
++          </button>
++        </div>
++      </div>
++    )
++  }
+ 
+   const current = QUESTIONS[step]
+   const total = QUESTIONS.length
+ 
++  // Initialize component safely
++  useEffect(() => {
++    try {
++      console.log('QuizFlow initialized with step:', step, 'total:', total);
++      if (!current) {
++        setError('Failed to load quiz questions');
++      }
++    } catch (err) {
++      console.error('Error initializing QuizFlow:', err);
++      setError('Failed to initialize quiz');
++    }
++  }, [step, total, current]);
++
+   function handleAnswer(val) {
+-    console.log('handleAnswer called:', { val, step, current: current?.id })
+-    if (step === total - 1) {
+-      setAnswers(a => {
+-        const next = { ...a, [current.id]: val };
+-        console.log('Quiz completed, calling onComplete with:', next);
+-        onComplete(next);
+-        return next;
+-      });
+-    } else {
+-      setAnswers(a => ({ ...a, [current.id]: val }));
+-      setTimeout(() => setStep(s => s + 1), 350);
++    try {
++      console.log('handleAnswer called:', { val, step, current: current?.id })
++      if (step === total - 1) {
++        setAnswers(a => {
++          const next = { ...a, [current.id]: val };
++          console.log('Quiz completed, calling onComplete with:', next);
++          onComplete(next);
++          return next;
++        });
++      } else {
++        setAnswers(a => ({ ...a, [current.id]: val }));
++        setTimeout(() => setStep(s => s + 1), 350);
++      }
++    } catch (err) {
++      console.error('Error in handleAnswer:', err);
++      setError(err.message || 'An error occurred while processing your answer');
+     }
+   }
+ 
+@@ -134,13 +172,13 @@ export default function QuizFlow({ onComplete }) {
+ 
+   return (
+     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#232946] to-[#6c3fa7] p-4">
+-      <div className="w-full max-w-md mx-auto rounded-3xl bg-white/10 shadow-2xl p-8 flex flex-col items-center relative animate-fade-in" style={{backdropFilter: 'blur(8px)'}}>
++      <div className="w-full max-w-md mx-auto rounded-3xl bg-white/10 shadow-2xl p-8 flex flex-col items-center relative" style={{backdropFilter: 'blur(8px)'}}>
+         <div className="flex flex-row items-center gap-2 mb-4">
+           <span className="text-2xl">{current.emoji}</span>
+           <span className="text-lg font-bold text-white/90">Question {step + 1} of {total}</span>
+           <span className="text-lg">{step < total - 1 ? '👉' : '🎬'}</span>
+         </div>
+-        <motion.div
++          <motion.div
+           key={current.id}
+           initial={{ opacity: 0, y: 32 }}
+           animate={{ opacity: 1, y: 0 }}
+@@ -209,12 +247,12 @@ export default function QuizFlow({ onComplete }) {
+             </div>
+           )}
+           {step === total - 1 ? (
+-            <button
++          <button
+               className="w-full mt-4 py-3 rounded-full bg-gradient-to-r from-yellow-400 to-pink-400 text-black font-extrabold text-lg shadow-xl hover:scale-105 transition"
+               onClick={handleSubmit}
+-            >
++          >
+               See My Matches
+-            </button>
++          </button>
+           ) : null}
+         </motion.div>
+         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-row gap-1">
+diff --git a/Desktop/swipeflix/vercel.json b/Desktop/swipeflix/vercel.json
+new file mode 100644
+index 00000000..de58a0f8
+--- /dev/null
++++ b/Desktop/swipeflix/vercel.json
+@@ -0,0 +1,30 @@
++{
++  "buildCommand": "npm run build",
++  "outputDirectory": "dist",
++  "framework": "vite",
++  "rewrites": [
++    {
++      "source": "/(.*)",
++      "destination": "/index.html"
++    }
++  ],
++  "headers": [
++    {
++      "source": "/(.*)",
++      "headers": [
++        {
++          "key": "X-Content-Type-Options",
++          "value": "nosniff"
++        },
++        {
++          "key": "X-Frame-Options",
++          "value": "DENY"
++        },
++        {
++          "key": "X-XSS-Protection",
++          "value": "1; mode=block"
++        }
++      ]
++    }
++  ]
++} 
+\ No newline at end of file
+diff --git a/Desktop/swipeflix/vite.config.js b/Desktop/swipeflix/vite.config.js
+index 8b0f57b9..1d3a42d8 100644
+--- a/Desktop/swipeflix/vite.config.js
++++ b/Desktop/swipeflix/vite.config.js
+@@ -4,4 +4,17 @@ import react from '@vitejs/plugin-react'
+ // https://vite.dev/config/
+ export default defineConfig({
+   plugins: [react()],
++  build: {
++    rollupOptions: {
++      output: {
++        manualChunks: {
++          vendor: ['react', 'react-dom'],
++          motion: ['framer-motion']
++        }
++      }
++    }
++  },
++  server: {
++    port: 5173
++  }
+ })
+diff --git a/newsletter/README.md b/newsletter/README.md
+index 5b8515af..05f84025 100644
+--- a/newsletter/README.md
++++ b/newsletter/README.md
+@@ -1,263 +1,60 @@
+-# AI Newsletter Platform
++# yourAIbrief – AI Newsletter Platform
+ 
+-A comprehensive AI newsletter platform that delivers curated, up-to-date artificial intelligence news with superior coverage and personalization compared to existing newsletters like TLDR.
++A comprehensive AI newsletter platform delivering curated, up-to-date artificial intelligence news with superior coverage and personalization. Built to help users stay ahead in the fast-moving world of AI, yourAIbrief offers a premium, user-friendly experience.
+ 
+-## 🚀 Features
+-
+-### Core Features
+-- **AI-Powered Content Curation**: Advanced algorithms analyze and curate the most relevant AI content
+-- **Personalized Newsletters**: Tailored content based on user interests and preferences
+-- **Real-time Updates**: Breaking AI news and research papers within hours of publication
+-- **Multi-section Format**: Organized content across 10+ AI categories
+-- **Quality Assurance**: Human editorial review ensures accuracy and relevance
+-- **Flexible Delivery**: Customizable delivery times and frequencies
+-
+-### Technical Features
+-- **Modern Tech Stack**: Next.js 14, TypeScript, Tailwind CSS, Prisma
+-- **Responsive Design**: Mobile-first approach with beautiful UI/UX
+-- **Dark Mode Support**: Automatic theme switching
+-- **Performance Optimized**: Fast loading with optimized assets
+-- **Scalable Architecture**: Built to handle 100K+ subscribers
+-
+-## 🛠️ Tech Stack
+-
+-### Frontend
+-- **Next.js 14**: React framework with App Router
+-- **TypeScript**: Type-safe development
+-- **Tailwind CSS**: Utility-first CSS framework
+-- **Framer Motion**: Smooth animations and transitions
+-- **Lucide React**: Beautiful icons
+-- **React Hook Form**: Form handling and validation
+-
+-### Backend
+-- **Node.js**: JavaScript runtime
+-- **Prisma**: Database ORM
+-- **PostgreSQL**: Primary database
+-- **Redis**: Caching and session storage
+-- **NextAuth.js**: Authentication system
+-
+-### External Services
+-- **SendGrid**: Email delivery service
+-- **OpenAI**: AI-powered content curation
+-- **News APIs**: Content aggregation
+-- **Analytics**: User behavior tracking
+-
+-## 📦 Installation
+-
+-### Prerequisites
+-- Node.js 18+ 
+-- PostgreSQL database
+-- Redis (optional, for caching)
+-
+-### Setup
+-
+-1. **Clone the repository**
+-   ```bash
+-   git clone <repository-url>
+-   cd ai-newsletter-platform
+-   ```
+-
+-2. **Install dependencies**
+-   ```bash
+-   npm install
+-   ```
+-
+-3. **Environment Setup**
+-   ```bash
+-   cp env.example .env.local
+-   ```
+-   
+-   Update the `.env.local` file with your configuration:
+-   ```env
+-   # Database
+-   DATABASE_URL="postgresql://username:password@localhost:5432/ai_newsletter"
+-   
+-   # Authentication
+-   NEXTAUTH_URL="http://localhost:3000"
+-   NEXTAUTH_SECRET="your-secret-key-here"
+-   
+-   # Email Services
+-   SENDGRID_API_KEY="your-sendgrid-api-key"
+-   SENDGRID_FROM_EMAIL="noreply@yourdomain.com"
+-   
+-   # OpenAI (for content curation)
+-   OPENAI_API_KEY="your-openai-api-key"
+-   ```
+-
+-4. **Database Setup**
+-   ```bash
+-   # Generate Prisma client
+-   npm run db:generate
+-   
+-   # Push schema to database
+-   npm run db:push
+-   ```
+-
+-5. **Start Development Server**
+-   ```bash
+-   npm run dev
+-   ```
+-
+-6. **Open your browser**
+-   Navigate to [http://localhost:3000](http://localhost:3000)
+-
+-## 🏗️ Project Structure
+-
+-```
+-src/
+-├── app/                    # Next.js App Router
+-│   ├── api/               # API routes
+-│   ├── globals.css        # Global styles
+-│   ├── layout.tsx         # Root layout
+-│   └── page.tsx           # Home page
+-├── components/            # React components
+-│   ├── forms/            # Form components
+-│   ├── providers/        # Context providers
+-│   └── sections/         # Page sections
+-├── lib/                  # Utility libraries
+-├── types/                # TypeScript types
+-└── utils/                # Helper functions
+-
+-prisma/
+-├── schema.prisma         # Database schema
+-└── migrations/           # Database migrations
+-```
+-
+-## 🎯 Key Components
+-
+-### Content Categories
+-1. **AI Breakthroughs & Research** - Latest papers and discoveries
+-2. **Industry News & Applications** - Real-world implementations
+-3. **Machine Learning & Deep Learning** - Technical developments
+-4. **AI Tools & Platforms** - New releases and updates
+-5. **Computer Vision & Robotics** - Visual AI and automation
+-6. **Natural Language Processing** - Language models and text processing
+-7. **AI Ethics & Regulation** - Policy and ethical discussions
+-8. **Startup Spotlight** - Emerging AI companies
+-9. **Opinion & Analysis** - Expert insights and predictions
+-10. **Healthcare AI** - Medical applications
+-11. **Autonomous Systems** - Self-driving and automation
+-12. **Regulation & Policy** - Legal and compliance updates
+-
+-### User Experience
+-- **Onboarding Flow**: Multi-step subscription process
+-- **Interest Selection**: Visual category selection
+-- **Personalization**: Learning algorithm adapts to user behavior
+-- **Analytics Dashboard**: User engagement tracking
+-- **Mobile Responsive**: Optimized for all devices
+-
+-## 🔧 Development
+-
+-### Available Scripts
+-```bash
+-npm run dev          # Start development server
+-npm run build        # Build for production
+-npm run start        # Start production server
+-npm run lint         # Run ESLint
+-npm run type-check   # Run TypeScript check
+-npm run db:generate  # Generate Prisma client
+-npm run db:push      # Push schema to database
+-npm run db:studio    # Open Prisma Studio
+-```
+-
+-### Database Management
+-```bash
+-# Create migration
+-npx prisma migrate dev --name migration_name
+-
+-# Reset database
+-npx prisma migrate reset
+-
+-# View database
+-npx prisma studio
+-```
+-
+-## 🚀 Deployment
+-
+-### Vercel (Recommended)
+-1. Connect your GitHub repository to Vercel
+-2. Set environment variables in Vercel dashboard
+-3. Deploy automatically on push to main branch
+-
+-### Manual Deployment
+-1. Build the application: `npm run build`
+-2. Start the production server: `npm run start`
+-3. Set up reverse proxy (nginx) if needed
+-
+-## 📊 Analytics & Monitoring
++---
+ 
+-### Key Metrics
+-- **Open Rates**: Target >40%
+-- **Click-through Rates**: Target >8%
+-- **Time Spent Reading**: Target >3 minutes
+-- **Subscription Retention**: Target >85% monthly
+-- **User Satisfaction**: Target >4.5/5
++## 🚀 What is yourAIbrief?
+ 
+-### Monitoring Tools
+-- **Vercel Analytics**: Performance monitoring
+-- **Google Analytics**: User behavior tracking
+-- **Custom Dashboard**: Newsletter-specific metrics
++**yourAIbrief** is a modern platform that:
++- Curates the most credible, breaking, and relevant AI news from top sources
++- Personalizes newsletters based on user-selected topics and interests
++- Delivers news at the user’s preferred time and frequency (daily, weekly, monthly)
++- Presents content in a beautiful, multi-section email format
++- Always ends with a fun, trending, or miscellaneous “What’s Popping in AI?” section
+ 
+-## 🔒 Security & Privacy
++---
+ 
+-### Data Protection
+-- **GDPR Compliance**: EU data protection
+-- **Data Encryption**: At rest and in transit
+-- **Secure Authentication**: 2FA support
+-- **Privacy-focused Analytics**: Minimal data collection
++## 🧠 How It Works
+ 
+-### Email Security
+-- **Double Opt-in**: Confirmation required
+-- **Unsubscribe Compliance**: Easy opt-out
+-- **Spam Prevention**: Best practices implementation
++1. **User Onboarding:**
++   - Users subscribe and select their AI interests (e.g., Research, Industry, Tools, Ethics, etc.)
++   - Users choose their preferred delivery time and frequency
+ 
+-## 🤝 Contributing
++2. **Content Curation:**
++   - For each topic, the platform selects 4–5 top, credible, breaking stories from a strict whitelist
++   - A final “What’s Popping in AI?” section features fun, trending, or quirky AI news from a broader set of sources (but never blocklisted)
+ 
+-1. Fork the repository
+-2. Create a feature branch: `git checkout -b feature-name`
+-3. Make your changes
+-4. Add tests if applicable
+-5. Commit your changes: `git commit -m 'Add feature'`
+-6. Push to the branch: `git push origin feature-name`
+-7. Submit a pull request
++3. **Newsletter Delivery:**
++   - Newsletters are sent at the user’s chosen time, with each topic as a section and a fun ending
++   - All emails are mobile-friendly, visually appealing, and easy to read
+ 
+-## 📝 License
++---
+ 
+-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
++## 🛠️ Tech Stack
+ 
+-## 🆘 Support
++- **Frontend:** Next.js 14, TypeScript, Tailwind CSS
++- **Backend:** Node.js, Prisma ORM, PostgreSQL
++- **Email:** SendGrid
++- **AI/Content:** OpenAI, News APIs
++- **Other:** Redis (optional), NextAuth.js (auth)
+ 
+-For support and questions:
+-- Create an issue in the GitHub repository
+-- Contact the development team
+-- Check the documentation
++---
+ 
+-## 🗺️ Roadmap
++## 🗂️ Project Structure (High-Level)
+ 
+-### Phase 1: MVP (Months 1-3)
+-- [x] Basic email newsletter
+-- [x] Web signup form
+-- [x] Core interest categories
+-- [x] Basic personalization
++- `src/app/` – App routes, API endpoints, global styles
++- `src/components/` – UI components and sections
++- `src/lib/` – Content curation, email logic, utilities
++- `prisma/` – Database schema
++- `public/` – Static assets
+ 
+-### Phase 2: Platform Enhancement (Months 4-6)
+-- [ ] Full web application
+-- [ ] Advanced personalization
+-- [ ] Mobile optimization
+-- [ ] User dashboard
++---
+ 
+-### Phase 3: Advanced Features (Months 7-12)
+-- [ ] Mobile app development
+-- [ ] AI-powered curation
+-- [ ] Social features
+-- [ ] Premium tier launch
++## ❗ Usage & License
+ 
+-### Phase 4: Scale & Optimize (Year 2+)
+-- [ ] International expansion
+-- [ ] Advanced analytics
+-- [ ] API for third-party integrations
+-- [ ] Community features
++This project is for demonstration and inspiration only. **The code is not provided for reuse or redistribution.**
+ 
+ ---
+ 
+-Built with ❤️ for the AI community 
+\ No newline at end of file
++Built with ❤️ for the AI community. For questions or a demo, contact the author directly. 
+\ No newline at end of file
+diff --git a/newsletter/next.config.js b/newsletter/next.config.js
+index ba20cd37..2c3fb1a7 100644
+--- a/newsletter/next.config.js
++++ b/newsletter/next.config.js
+@@ -1,5 +1,6 @@
+ /** @type {import('next').NextConfig} */
+ const nextConfig = {
++  output: 'standalone',
+   images: {
+     domains: [
+       'images.unsplash.com',
+diff --git a/newsletter/src/app/api/subscribe/route.ts b/newsletter/src/app/api/subscribe/route.ts
+index 417963f4..f0f141db 100644
+--- a/newsletter/src/app/api/subscribe/route.ts
++++ b/newsletter/src/app/api/subscribe/route.ts
+@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
+       });
+       // Send welcome email only for new users
+       let emailSent = false;
+-      try {
+-        const EmailService = (await import('@/lib/email-service')).EmailService;
+-        const emailService = new EmailService();
++    try {
++      const EmailService = (await import('@/lib/email-service')).EmailService;
++      const emailService = new EmailService();
+         // Patch user object to match app User type
+         const { id, email: userEmail, name, preferences, role, isActive, createdAt, updatedAt } = user;
+         let safePreferences: Record<string, any> | undefined = undefined;
+@@ -60,18 +60,18 @@ export async function POST(request: NextRequest) {
+           updatedAt,
+         };
+         emailSent = await emailService.sendWelcomeEmail(patchedUser);
+-      } catch (e) {
+-        console.error('Failed to send welcome email:', e);
+-      }
+-      return NextResponse.json({
+-        success: true,
++    } catch (e) {
++      console.error('Failed to send welcome email:', e);
++    }
++    return NextResponse.json({
++      success: true,
+         message: emailSent
+           ? 'Successfully subscribed to AI Newsletter. Welcome email sent!'
+           : 'Successfully subscribed, but failed to send welcome email.',
+-        user: {
+-          id: user.id,
+-          email: user.email,
+-          interests: user.userInterests.map((ui: any) => ui.category),
++      user: {
++        id: user.id,
++        email: user.email,
++        interests: user.userInterests.map((ui: any) => ui.category),
+           preferredSendTime: user.preferredSendTime,
+         },
+         alreadySubscribed: false,
+diff --git a/newsletter/src/lib/content-curation.ts b/newsletter/src/lib/content-curation.ts
+index 51df2192..7d0ef886 100644
+--- a/newsletter/src/lib/content-curation.ts
++++ b/newsletter/src/lib/content-curation.ts
+@@ -217,7 +217,7 @@ export class ContentCurationService {
+         order: topicSections.length,
+       });
+     }
+-
++    
+     // Generate summary
+     const summary = this.generateSummary(topicSections);
+     return {
