@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 
 const QUESTIONS = [
   {
@@ -178,7 +177,7 @@ export default function QuizFlow({ onComplete }) {
           <span className="text-lg font-bold text-white/90">Question {step + 1} of {total}</span>
           <span className="text-lg">{step < total - 1 ? '👉' : '🎬'}</span>
         </div>
-          <motion.div
+          <div
           key={current.id}
           initial={{ opacity: 0, y: 32 }}
           animate={{ opacity: 1, y: 0 }}
@@ -254,7 +253,7 @@ export default function QuizFlow({ onComplete }) {
               See My Matches
           </button>
           ) : null}
-        </motion.div>
+        </div>
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-row gap-1">
           {QUESTIONS.map((q, i) => (
             <span key={q.id} className={`w-3 h-3 rounded-full ${i === step ? 'bg-yellow-400' : 'bg-white/30'} transition-all`} />
