@@ -80,6 +80,7 @@ const QUESTIONS = [
 
 export default function QuizFlow({ onComplete }) {
   const [step, setStep] = useState(0)
+  console.log("Quiz step initialized:", step)
   const [answers, setAnswers] = useState({})
   const [error, setError] = useState(null)
 
@@ -266,4 +267,4 @@ export default function QuizFlow({ onComplete }) {
       `}</style>
     </div>
   )
-}
+}console.log("QUESTIONS array:", QUESTIONS.length, "First question:", QUESTIONS[0]?.text)
