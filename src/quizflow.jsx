@@ -122,7 +122,7 @@ export default function QuizFlow({ onComplete }) {
   function handleAnswer(val) {
     try {
       console.log('handleAnswer called:', { val, step, current: current?.id })
-      if (step === total - 1) {
+      if (validStep >= total - 1) {
         setAnswers(a => {
           const next = { ...a, [current.id]: val };
           console.log('Quiz completed, calling onComplete with:', next);
@@ -131,7 +131,7 @@ export default function QuizFlow({ onComplete }) {
         });
       } else {
         setAnswers(a => ({ ...a, [current.id]: val }));
-        setTimeout(() => setStep(s => s + 1), 350);
+        setTimeout(() => setStep(s => Math.min(s + 1, total - 1)), 350);
       }
     } catch (err) {
       console.error('Error in handleAnswer:', err);
