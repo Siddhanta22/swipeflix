@@ -11,6 +11,7 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
   const [inWatchlist, setInWatchlist] = useState(isInWatchlist(movie.id));
   const [touchStart, setTouchStart] = useState(0);
   const [touchCurrent, setTouchCurrent] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
 
 
@@ -89,6 +90,7 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
     if (!isTopCard) return;
     const touch = e.touches[0];
     setTouchStart(touch.clientX);
+    setTouchCurrent(touch.clientX);
   };
 
   const handleTouchMove = (e) => {
@@ -100,8 +102,35 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
   const handleTouchEnd = () => {
     if (!isTopCard) return;
     const diff = touchStart - touchCurrent;
+    console.log('Swipe detected:', { diff, touchStart, touchCurrent });
     if (Math.abs(diff) > 50) {
       const direction = diff > 0 ? 'like' : 'dislike';
+      console.log('Swipe direction:', direction);
+      onSwipe(direction);
+    }
+  };
+
+  // Mouse drag handlers for desktop
+  const handleMouseDown = (e) => {
+    if (!isTopCard) return;
+    setIsDragging(true);
+    setTouchStart(e.clientX);
+    setTouchCurrent(e.clientX);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isTopCard || !isDragging) return;
+    setTouchCurrent(e.clientX);
+  };
+
+  const handleMouseUp = () => {
+    if (!isTopCard || !isDragging) return;
+    setIsDragging(false);
+    const diff = touchStart - touchCurrent;
+    console.log('Mouse swipe detected:', { diff, touchStart, touchCurrent });
+    if (Math.abs(diff) > 50) {
+      const direction = diff > 0 ? 'like' : 'dislike';
+      console.log('Mouse swipe direction:', direction);
       onSwipe(direction);
     }
   };
@@ -112,7 +141,7 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
   // Full-screen swipeable card with image gallery and text overlay
   return (
     <div
-      className="fixed inset-0 w-screen h-screen flex flex-col items-end justify-end bg-black select-none"
+      className={`fixed inset-0 w-screen h-screen flex flex-col items-end justify-end bg-black select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       style={{
         backgroundImage: `url(${currImg})`,
         backgroundSize: 'cover',
@@ -126,6 +155,10 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     >
       {/* Full-size invisible tap overlay for gallery cycling */}
       <div
