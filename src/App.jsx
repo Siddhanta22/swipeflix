@@ -683,16 +683,10 @@ export default function App() {
     );
   }
 
-  // Debug component to show API key status
-  const apiKeyStatus = import.meta.env.VITE_TMDB_API_KEY ? '✅ Set' : '❌ Missing';
-  const apiKeyLength = import.meta.env.VITE_TMDB_API_KEY?.length || 0;
+
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Debug info - remove this after fixing */}
-      <div className="fixed top-0 left-0 right-0 bg-red-900 text-white text-xs p-2 text-center z-50">
-        Debug: API Key {apiKeyStatus} (Length: {apiKeyLength}) | Quiz: {showQuiz ? 'Active' : 'Complete'} | Loading: {isLoading ? 'Yes' : 'No'}
-      </div>
       
       {/* Rest of the app */}
       {showQuiz ? (
