@@ -65,6 +65,8 @@ export default function App() {
   const [swipeOut, setSwipeOut] = useState(false); // for swiping animation
   const homeCardRef = useRef(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState([]);
+  const [similarMovies, setSimilarMovies] = useState([]);
+  const [showSimilarMovies, setShowSimilarMovies] = useState(false);
 
   // Initialization Effect
   useEffect(() => {
@@ -90,6 +92,10 @@ export default function App() {
   const handleSwipe = (movie, preference) => {
     if (preference === 'like') {
       setLikedMovies((prev) => [...prev, movie]);
+      // Fetch similar movies when user likes a movie
+      if (movie.id && movie.media_type) {
+        fetchSimilarMovies(movie.id, movie.media_type);
+      }
     } else {
       setDislikedMovies((prev) => [...prev, movie]);
     }
@@ -268,7 +274,7 @@ export default function App() {
         ];
         
         // If genre is selected, use discover endpoints
-        if (selectedGenre) {
+    if (selectedGenre) {
           results = await fetchMoreResults(`${TMDB}/discover/movie?api_key=${key}&with_genres=${selectedGenre}`, 1, 3);
           results = results.map(m => ({ ...m, media_type: 'movie' }));
         } else {
@@ -495,6 +501,77 @@ export default function App() {
     } else {
       addToWatchlist(movie);
       setWatchlist(getWatchlist());
+    }
+  };
+
+  // Fetch similar movies based on liked movies
+  const fetchSimilarMovies = async (movieId, mediaType = 'movie') => {
+    try {
+      const key = import.meta.env.VITE_TMDB_API_KEY;
+      const response = await fetch(`${TMDB}/${mediaType}/${movieId}/similar?api_key=${key}`);
+      const data = await response.json();
+      
+      if (data.results && data.results.length > 0) {
+        // Process similar movies with full details
+        const processedSimilar = await Promise.all(
+          data.results.slice(0, 10).map(async (movie) => {
+            const images = await fetch(`${TMDB}/${mediaType}/${movie.id}/images?api_key=${key}`)
+              .then((r) => r.json())
+              .then((x) =>
+                [
+                  ...(x.backdrops || []).map((b) => b.file_path),
+                  ...(x.posters || []).map((p) => p.file_path),
+                ]
+                  .slice(0, 6)
+                  .map((p) => `https://image.tmdb.org/t/p/original${p}`)
+              )
+              .then((imgs) => (imgs.length ? imgs : [FALLBACK]))
+              .catch(() => [FALLBACK]);
+
+            const credits = await fetch(`${TMDB}/${mediaType}/${movie.id}/credits?api_key=${key}`)
+              .then((r) => r.json())
+              .catch(() => ({ cast: [] }));
+
+            const cast = Array.isArray(credits.cast)
+              ? credits.cast.slice(0, 5).map(actor => ({
+                  name: actor.name,
+                  profile: actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : null
+                }))
+              : [];
+
+            const providersData = await fetch(`${TMDB}/${mediaType}/${movie.id}/watch/providers?api_key=${key}`)
+              .then((r) => r.json())
+              .catch(() => ({}));
+
+            const usProviders = providersData.results && providersData.results.US && providersData.results.US.flatrate
+              ? providersData.results.US.flatrate.map(p => ({
+                  name: p.provider_name,
+                  logo: p.logo_path ? `https://image.tmdb.org/t/p/w92${p.logo_path}` : null
+                }))
+              : [];
+
+            return {
+              id: movie.id,
+              title: movie.title || movie.name || 'Untitled',
+              year: (movie.release_date || movie.first_air_date || '').split('-')[0] || '',
+              description: movie.overview || 'No description',
+              images,
+              rating: movie.vote_average || null,
+              cast,
+              providers: usProviders,
+              media_type: mediaType,
+              popularity: movie.popularity || 0,
+              vote_average: movie.vote_average || 0
+            };
+          })
+        );
+
+        setSimilarMovies(processedSimilar);
+        setShowSimilarMovies(true);
+        console.log('Similar movies loaded:', processedSimilar.length);
+      }
+    } catch (error) {
+      console.error('Error fetching similar movies:', error);
     }
   };
 
@@ -854,6 +931,15 @@ export default function App() {
               </button>
               
               <button
+                onClick={() => fetchSimilarMovies(currentCard.id, currentCard.media_type)}
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-indigo-500 to-pink-600 flex items-center justify-center text-3xl shadow-lg hover:from-indigo-600 hover:to-pink-700 transition-all duration-200 transform hover:scale-110 border-4 border-white/20 backdrop-blur-sm"
+                aria-label="Similar Movies"
+                style={{boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3)'}}
+              >
+                🔄
+              </button>
+              
+              <button
                 onClick={() => handleSwipe(currentCard, 'like')}
                 className="w-16 h-16 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center text-3xl shadow-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 transform hover:scale-110 border-4 border-white/20 backdrop-blur-sm"
                 aria-label="Like"
@@ -910,6 +996,62 @@ export default function App() {
           </div>
         </div>
       )}
+        </div>
+      )}
+
+      {/* Similar Movies Modal */}
+      {showSimilarMovies && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur" style={{animation: 'fadeIn 0.2s'}}>
+          <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl shadow-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto relative border border-purple-500/20">
+            <button
+              onClick={() => setShowSimilarMovies(false)}
+              className="absolute top-3 right-3 text-white/70 hover:text-white text-2xl font-bold"
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent mb-4">🔄 Similar Movies</h2>
+            {similarMovies.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-6xl mb-4">🎬</div>
+                <p className="text-gray-400 text-lg">Finding similar movies...</p>
+                <p className="text-gray-500 text-sm mt-2">This may take a moment.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {similarMovies.map((movie) => (
+                  <div
+                    key={movie.id}
+                    className="bg-gradient-to-r from-zinc-800 to-zinc-700 rounded-lg p-3 cursor-pointer hover:from-zinc-700 hover:to-zinc-600 transition-all duration-200 transform hover:scale-105 border border-zinc-600/50"
+                    onClick={() => {
+                      setCurrentCard(movie);
+                      setImgIdx(0);
+                      setShowSimilarMovies(false);
+                      addSeenIds([movie.id]);
+                    }}
+                  >
+                    <img src={movie.images?.[0] || 'https://placehold.co/200x300/222/fff?text=No+Image'} alt={movie.title} className="w-full h-48 object-cover rounded-lg border border-zinc-700 mb-3" />
+                    <div className="space-y-2">
+                      <div className="font-semibold text-white text-sm">{movie.title} <span className="text-gray-400 text-xs">({movie.year})</span></div>
+                      <div className="text-xs text-gray-400 line-clamp-2">{movie.description}</div>
+                      {movie.rating && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-yellow-400 text-xs">⭐</span>
+                          <span className="text-white text-xs">{movie.rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                      {movie.providers && movie.providers.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-blue-400 text-xs">📺</span>
+                          <span className="text-white text-xs">{movie.providers[0].name}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
