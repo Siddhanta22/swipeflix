@@ -253,21 +253,38 @@ export default function App() {
           results = results.map(m => ({ ...m, media_type: 'tv' }));
         }
       } else {
-        // No language filter: use trending or discover as before
-        let url = `${TMDB}/trending/all/week?api_key=${key}`;
-        endpointType = 'all';
+        // No language filter: use multiple sources for variety
+        let results = [];
+        
+        // Fetch from multiple sources for variety
+        const sources = [
+          `${TMDB}/trending/all/week?api_key=${key}`,
+          `${TMDB}/movie/popular?api_key=${key}`,
+          `${TMDB}/tv/popular?api_key=${key}`,
+          `${TMDB}/movie/top_rated?api_key=${key}`,
+          `${TMDB}/tv/top_rated?api_key=${key}`
+        ];
+        
+        // If genre is selected, use discover endpoints
         if (selectedGenre) {
-          url = `${TMDB}/discover/movie?api_key=${key}&with_genres=${selectedGenre}`;
-          endpointType = 'movie';
-        }
-        // Pick a random starting page (1-500)
-        const maxPage = 500;
-        const randomStartPage = Math.floor(Math.random() * maxPage) + 1;
-        results = await fetchMoreResults(url, randomStartPage, 5);
-        if (endpointType === 'all') {
-          results = results.filter(m => m.media_type === 'movie' || m.media_type === 'tv');
-        } else if (endpointType === 'movie') {
+          results = await fetchMoreResults(`${TMDB}/discover/movie?api_key=${key}&with_genres=${selectedGenre}`, 1, 3);
           results = results.map(m => ({ ...m, media_type: 'movie' }));
+        } else {
+          // Fetch from multiple sources and combine
+          const allResults = await Promise.all(
+            sources.map(url => fetchMoreResults(url, Math.floor(Math.random() * 10) + 1, 2))
+          );
+          results = allResults.flat();
+        }
+        
+        // Ensure we have a mix of movies and TV shows
+        if (selectedType === 'all') {
+          results = results.filter(m => m.media_type === 'movie' || m.media_type === 'tv');
+        } else if (selectedType === 'movie') {
+          results = results.filter(m => m.media_type === 'movie' || !m.media_type);
+          results = results.map(m => ({ ...m, media_type: 'movie' }));
+        } else if (selectedType === 'tv') {
+          results = results.filter(m => m.media_type === 'tv');
         }
       }
       // After filtering and before sorting, bias toward quiz genres
@@ -489,15 +506,15 @@ export default function App() {
     const key = import.meta.env.VITE_TMDB_API_KEY;
     const mediaType = item.media_type || 'movie';
     const images = await fetch(`${TMDB}/${mediaType}/${item.id}/images?api_key=${key}`)
-      .then((r) => r.json())
-      .then((x) =>
-        [
-          ...(x.backdrops || []).map((b) => b.file_path),
-          ...(x.posters || []).map((p) => p.file_path),
-        ]
-          .slice(0, 6)
-          .map((p) => `https://image.tmdb.org/t/p/original${p}`)
-      )
+              .then((r) => r.json())
+              .then((x) =>
+                [
+                  ...(x.backdrops || []).map((b) => b.file_path),
+                  ...(x.posters || []).map((p) => p.file_path),
+                ]
+                  .slice(0, 6)
+                  .map((p) => `https://image.tmdb.org/t/p/original${p}`)
+              )
       .then((imgs) => (imgs.length ? imgs : [FALLBACK]));
     const credits = await fetch(`${TMDB}/${mediaType}/${item.id}/credits?api_key=${key}`)
       .then((r) => r.json())
@@ -538,7 +555,7 @@ export default function App() {
     setSelectedCertification('');
     setSelectedPlatforms([]);
   }
-
+  
   // --- Conditional Rendering Logic ---
 
   if (showHome) {
@@ -661,7 +678,7 @@ export default function App() {
       </div>
     );
   }
-
+  
   // Show demo mode if no API key
   if (!import.meta.env.VITE_TMDB_API_KEY) {
     return (
@@ -693,7 +710,7 @@ export default function App() {
     );
   }
 
-
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 text-white">
@@ -759,23 +776,25 @@ export default function App() {
             style={{maxWidth: 120}}
           >
             <option value="">All Languages</option>
-            {languages.map((lang) => (
-              <option key={lang.iso_639_1} value={lang.iso_639_1}>{lang.english_name}</option>
-            ))}
+            {languages
+              .sort((a, b) => a.english_name.localeCompare(b.english_name))
+              .map((lang) => (
+                <option key={lang.iso_639_1} value={lang.iso_639_1}>{lang.english_name}</option>
+              ))}
           </select>
         </div>
         {/* Genre Filter */}
         <div>
-          <select
-            value={selectedGenre}
-            onChange={(e) => { setHasInitiallyLoaded(false); setSelectedGenre(e.target.value) }}
+        <select
+          value={selectedGenre}
+          onChange={(e) => { setHasInitiallyLoaded(false); setSelectedGenre(e.target.value) }}
             className="bg-white/10 text-white px-3 py-2 rounded-lg border border-white/20 max-w-[180px] text-ellipsis overflow-hidden"
             style={{maxWidth: 180}}
-          >
-            <option value="">All Genres</option>
-            {genres.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-          </select>
-        </div>
+        >
+          <option value="">All Genres</option>
+          {genres.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+        </select>
+      </div>
         <button
           onClick={handleResetFilters}
           className="ml-4 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition"
