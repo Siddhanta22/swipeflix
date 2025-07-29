@@ -222,6 +222,9 @@ export default function App() {
       let movieUrl = '';
       let tvUrl = '';
       let endpointType = selectedType;
+      
+      try {
+        console.log('Starting movie fetch with:', { selectedType, selectedLanguage, selectedGenre });
       // If language is selected, always use discover endpoints
       if (selectedLanguage) {
         if (selectedType === 'all') {
@@ -254,7 +257,6 @@ export default function App() {
         }
       } else {
         // No language filter: use multiple sources for variety
-        let results = [];
         
         // Fetch from multiple sources for variety
         const sources = [
@@ -376,6 +378,12 @@ export default function App() {
       setHasInitiallyLoaded(true);
       setIsLoading(false);
       clearTimeout(timeoutId); // Clear timeout on success
+      } catch (error) {
+        console.error('Error fetching movies:', error);
+        setError(`Failed to fetch movies: ${error.message}`);
+        setIsLoading(false);
+        clearTimeout(timeoutId);
+      }
     };
     
     // Add error handling to fetchInitial
