@@ -31,6 +31,7 @@ export default function App() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [likedMovies, setLikedMovies] = useState([]);
   const [dislikedMovies, setDislikedMovies] = useState([]);
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
@@ -65,13 +66,25 @@ export default function App() {
   const homeCardRef = useRef(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState([]);
 
+  // Initialization Effect
+  useEffect(() => {
+    const key = import.meta.env.VITE_TMDB_API_KEY;
+    console.log('App initialization - API Key available:', !!key, 'Key length:', key?.length);
+    if (!key) {
+      setError('Missing TMDB API key. Please check your environment variables.');
+    }
+    setIsInitialized(true);
+  }, []);
+
   const handleQuizComplete = (answers) => {
     console.log('handleQuizComplete called with:', answers);
     console.log('API Key available:', !!import.meta.env.VITE_TMDB_API_KEY);
     console.log('API Key length:', import.meta.env.VITE_TMDB_API_KEY?.length);
+    console.log('Setting quizAnswers and showQuiz=false');
     setQuizAnswers(answers);
     setShowQuiz(false);
     setIsLoading(true); // Immediately enter loading state
+    console.log('Quiz completion state changes triggered');
   };
 
   const handleSwipe = (movie, preference) => {
@@ -181,19 +194,27 @@ export default function App() {
   }
 
   useEffect(() => {
+    console.log('Movie fetching useEffect triggered:', { showQuiz, quizAnswers: !!quizAnswers });
     if (showQuiz) return;
     const key = import.meta.env.VITE_TMDB_API_KEY;
     console.log('API Key available:', !!key, 'Key length:', key?.length);
     if (!key) {
-      setError('Missing TMDB API key');
+      setError('Missing TMDB API key. Please check your environment variables.');
       return;
     }
-    if (!genres.length) return; // Wait for genres to load
     setIsLoading(true);
     setError(null);
     setSeenIds(new Set());
     setPendingResults([]);
     setFetchingMore(false);
+    
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        setError('Request timed out. Please check your internet connection and try again.');
+        setIsLoading(false);
+      }
+    }, 30000); // 30 second timeout
     
     const fetchInitial = async () => {
       const key = import.meta.env.VITE_TMDB_API_KEY;
@@ -337,9 +358,17 @@ export default function App() {
       setDislikedMovies([]);
       setHasInitiallyLoaded(true);
       setIsLoading(false);
+      clearTimeout(timeoutId); // Clear timeout on success
     };
-    fetchInitial();
-  }, [showQuiz, selectedGenre, selectedType, minRating, selectedLanguage, selectedCertification]);
+    
+    // Add error handling to fetchInitial
+    fetchInitial().catch((error) => {
+      console.error('Error fetching movies:', error);
+      setError('Failed to fetch movies. Please check your internet connection and try again.');
+      setIsLoading(false);
+      clearTimeout(timeoutId); // Clear timeout on error
+    });
+  }, [showQuiz, selectedGenre, selectedType, minRating, selectedLanguage, selectedCertification, quizAnswers]);
 
   // When pendingResults or seenIds change, load the first card if needed
   useEffect(() => {
@@ -591,110 +620,85 @@ export default function App() {
     );
   }
   
-  if (showQuiz) {
-    return <QuizFlow onComplete={handleQuizComplete} />;
+  // Initializing Loading State
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+        <div className="animate-spin h-12 w-12 border-b-2 border-white rounded-full mb-4"/>
+        <p className="text-lg">Initializing SwipeFlix...</p>
+      </div>
+    );
   }
-  
+
+  // API Key Error Message Enhancement
   if (error) {
      return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4 text-center">
+        <h1 className="text-2xl font-bold mb-4">🚨 SwipeFlix Error</h1>
         <p className="text-red-400 mb-4">Error: {error}</p>
+        {error.includes('API key') && (
+          <div className="bg-gray-800 p-4 rounded-lg mb-4 max-w-md">
+            <p className="text-sm text-gray-300 mb-2">To fix this:</p>
+            <ol className="text-sm text-gray-300 text-left">
+              <li>1. Go to your Vercel dashboard</li>
+              <li>2. Select this project</li>
+              <li>3. Go to Settings → Environment Variables</li>
+              <li>4. Add VITE_TMDB_API_KEY with your TMDB API key</li>
+            </ol>
+          </div>
+        )}
         <button onClick={() => window.location.reload()} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-full text-white">Retry</button>
       </div>
     );
   }
-  
+
+  // Show demo mode if no API key
+  if (!import.meta.env.VITE_TMDB_API_KEY) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4 text-center">
+        <h1 className="text-2xl font-bold mb-4">🎬 SwipeFlix Demo Mode</h1>
+        <p className="text-gray-300 mb-4">API key not configured. Running in demo mode.</p>
+        <div className="bg-gray-800 p-6 rounded-lg mb-4 max-w-md">
+          <p className="text-sm text-gray-300 mb-2">To enable full functionality:</p>
+          <ol className="text-sm text-gray-300 text-left">
+            <li>1. Get a free API key from <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">TMDB</a></li>
+            <li>2. Go to your Vercel dashboard</li>
+            <li>3. Go to Settings → Environment Variables</li>
+            <li>4. Add VITE_TMDB_API_KEY with your API key</li>
+          </ol>
+        </div>
+        <button onClick={() => setShowQuiz(true)} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-full text-white">Try Demo Quiz</button>
+      </div>
+    );
+  }
+
+  // General Loading State Enhancement
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="animate-spin h-12 w-12 border-b-2 border-white rounded-full mr-4"/>
-        Loading movies…
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+        <div className="animate-spin h-12 w-12 border-b-2 border-white rounded-full mb-4"/>
+        <p className="text-lg">Loading SwipeFlix...</p>
+        <p className="text-sm text-gray-400 mt-2">Fetching your perfect movie matches</p>
       </div>
     );
   }
 
-  if (hasInitiallyLoaded && (!currentCard && pendingResults.length === 0)) {
-    return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4 text-center">
-        <p className="text-xl">No movies found for this genre.</p>
-        <button onClick={() => { setHasInitiallyLoaded(false); setSelectedGenre(''); setSelectedType('all'); setMinRating(0); }} className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-full text-white">Try All Genres</button>
-      </div>
-    );
-  }
-
-  // Only show end-of-stack if we have loaded at least once and there are no cards left
-  if (hasInitiallyLoaded && !isLoading && !currentCard && pendingResults.length === 0) {
-    return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4 text-center">
-        <p className="text-2xl mb-4">That's all for now! 👋</p>
-        <p className="mb-8">You liked {likedMovies.length} out of {likedMovies.length + dislikedMovies.length} movies.</p>
-        <button onClick={() => {
-          setHasInitiallyLoaded(false);
-          setSelectedGenre('');
-          setSelectedType('all');
-          setMinRating(0);
-          setSeenIds(new Set());
-          setPendingResults([]);
-          setCurrentCard(null);
-        }} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-full text-white">Restart</button>
-      </div>
-    );
-  }
-
-  // --- Main App UI ---
-  
-  // Only show the current card (full-page experience)
-  const movie = currentCard;
-
-  // Action button handlers
-  const handleLike = () => {
-    if (movie) handleSwipe(movie, 'like');
-  };
-  const handleDislike = () => {
-    if (movie) handleSwipe(movie, 'dislike');
-  };
-
-  // Progress bar header (gallery slider)
-  const images = movie?.images || [];
-  const progressBar = images.length > 1 ? (
-    <div className="fixed top-0 left-0 w-full flex gap-1 z-50 px-4 pt-4" style={{pointerEvents: 'none'}}>
-      {images.map((_, i) => (
-        <div
-          key={i}
-          className={`h-1 flex-1 rounded-full ${i === imgIdx ? 'bg-white' : 'bg-white/40'}`}
-        />
-      ))}
-    </div>
-  ) : null;
-
-  // Platform filter bar
-  const platformFilterBar = (
-    <div className="flex flex-row flex-wrap gap-2 items-center justify-center mb-4 mt-2">
-      <span className="text-xs text-gray-300 mr-2">Platforms:</span>
-      {PLATFORM_OPTIONS.map(opt => (
-        <label key={opt.key} className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/10 text-white text-xs font-semibold cursor-pointer hover:bg-white/20 transition">
-          <input
-            type="checkbox"
-            checked={selectedPlatforms.includes(opt.key)}
-            onChange={e => {
-              if (e.target.checked) {
-                setSelectedPlatforms(prev => [...prev, opt.key]);
-              } else {
-                setSelectedPlatforms(prev => prev.filter(k => k !== opt.key));
-              }
-            }}
-            className="accent-blue-500"
-          />
-          {opt.label}
-        </label>
-      ))}
-    </div>
-  );
+  // Debug component to show API key status
+  const apiKeyStatus = import.meta.env.VITE_TMDB_API_KEY ? '✅ Set' : '❌ Missing';
+  const apiKeyLength = import.meta.env.VITE_TMDB_API_KEY?.length || 0;
 
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden flex flex-col items-center justify-center">
-      {/* Platform Filter Bar */}
-      {platformFilterBar}
+    <div className="min-h-screen bg-black text-white">
+      {/* Debug info - remove this after fixing */}
+      <div className="fixed top-0 left-0 right-0 bg-red-900 text-white text-xs p-2 text-center z-50">
+        Debug: API Key {apiKeyStatus} (Length: {apiKeyLength}) | Quiz: {showQuiz ? 'Active' : 'Complete'} | Loading: {isLoading ? 'Yes' : 'No'}
+      </div>
+      
+      {/* Rest of the app */}
+      {showQuiz ? (
+        <QuizFlow onComplete={handleQuizComplete} />
+      ) : (
+        <div className="relative min-h-screen bg-black text-white overflow-hidden flex flex-col items-center justify-center">
       {/* Filter Bar + Reset Button */}
       <div className="fixed top-0 left-0 w-full z-50 flex flex-row items-center gap-3 px-4 pt-4 bg-black/70 backdrop-blur-md overflow-x-auto whitespace-nowrap" style={{minHeight: 60}}>
         {/* Type Filter */}
@@ -756,23 +760,22 @@ export default function App() {
           Reset Filters
         </button>
       </div>
-      {progressBar}
 
       <div className="flex flex-col items-center justify-center w-full h-full flex-1 relative" style={{minHeight: '100vh'}}>
-        {movie && (
+        {currentCard && (
           <>
             <SwipeCard
-              key={movie.id}
-              movie={movie}
+              key={currentCard.id}
+              movie={currentCard}
               isTopCard={true}
-              onSwipe={(preference) => handleSwipe(movie, preference)}
+              onSwipe={(preference) => handleSwipe(currentCard, preference)}
               imgIdx={imgIdx}
               setImgIdx={setImgIdx}
             />
             {/* Action Buttons - floating at the bottom center */}
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center justify-center gap-8 z-50">
               <button
-                onClick={handleDislike}
+                onClick={() => handleSwipe(currentCard, 'dislike')}
                 className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center text-3xl shadow-lg hover:bg-red-700 transition border-4 border-white"
                 aria-label="Dislike"
                 style={{boxShadow: '0 4px 16px rgba(0,0,0,0.5)'}}
@@ -790,7 +793,7 @@ export default function App() {
                 </svg>
               </button>
               <button
-                onClick={handleLike}
+                onClick={() => handleSwipe(currentCard, 'like')}
                 className="w-16 h-16 rounded-full bg-green-600 flex items-center justify-center text-3xl shadow-lg hover:bg-green-700 transition"
                 aria-label="Like"
               >
@@ -839,6 +842,8 @@ export default function App() {
               </ul>
             )}
           </div>
+        </div>
+      )}
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 // src/SwipeCard.jsx
 import { useState, useEffect } from 'react';
+
 import { addToWatchlist, removeFromWatchlist, isInWatchlist } from './storage';
 
 const FALLBACK_IMAGE = 'https://placehold.co/800x1200/222/fff?text=No+Image';
@@ -7,19 +8,11 @@ const FALLBACK_IMAGE = 'https://placehold.co/800x1200/222/fff?text=No+Image';
 export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx }) {
   const { title, year, description, images, rating, cast, providers, certification, genres } = movie;
   const [imgError, setImgError] = useState(false);
-  const controls = useAnimation();
   const [inWatchlist, setInWatchlist] = useState(isInWatchlist(movie.id));
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchCurrent, setTouchCurrent] = useState(0);
 
-  // ✨ FIX: Use useEffect to set the default animation state
-  useEffect(() => {
-    // This sets the card's appearance when it mounts or when its position in the stack changes.
-    controls.start({
-      scale: isTopCard ? 1 : 0.95,
-      y: isTopCard ? 0 : -20,
-      opacity: 1,
-      transition: { type: 'spring', stiffness: 300, damping: 30 },
-    });
-  }, [isTopCard, controls]);
+
 
   const handleTap = (e) => {
     if (!isTopCard) return;
@@ -34,15 +27,13 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
       if (imgIdx < imageCount - 1) {
         setImgIdx(imgIdx + 1);
       } else {
-        // Trigger shake animation
-        controls.start({ x: [0, 10, -10, 10, 0], transition: { duration: 0.4 } });
+        // Trigger shake animation (removed for SSR compatibility)
       }
     } else {
       if (imgIdx > 0) {
         setImgIdx(imgIdx - 1);
       } else {
-        // Trigger shake animation
-        controls.start({ x: [0, -10, 10, -10, 0], transition: { duration: 0.4 } });
+        // Trigger shake animation (removed for SSR compatibility)
       }
     }
   };
@@ -59,13 +50,13 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
       if (imgIdx < imageCount - 1) {
         setImgIdx(imgIdx + 1);
       } else {
-        controls.start({ x: [0, 10, -10, 10, 0], transition: { duration: 0.4 } });
+        // Trigger shake animation (removed for SSR compatibility)
       }
     } else {
       if (imgIdx > 0) {
         setImgIdx(imgIdx - 1);
       } else {
-        controls.start({ x: [0, -10, 10, -10, 0], transition: { duration: 0.4 } });
+        // Trigger shake animation (removed for SSR compatibility)
       }
     }
   };
@@ -110,13 +101,23 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
         position: 'fixed',
         zIndex: 10,
       }}
-      drag={isTopCard ? 'x' : false}
-      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-      dragElastic={0.2}
-      onDragEnd={(_, info) => {
-        if (Math.abs(info.offset.x) < 50) return;
-        const direction = info.offset.x > 0 ? 'like' : 'dislike';
-        onSwipe(direction);
+      onTouchStart={(e) => {
+        if (!isTopCard) return;
+        const touch = e.touches[0];
+        setTouchStart(touch.clientX);
+      }}
+      onTouchMove={(e) => {
+        if (!isTopCard) return;
+        const touch = e.touches[0];
+        setTouchCurrent(touch.clientX);
+      }}
+      onTouchEnd={() => {
+        if (!isTopCard) return;
+        const diff = touchStart - touchCurrent;
+        if (Math.abs(diff) > 50) {
+          const direction = diff > 0 ? 'like' : 'dislike';
+          onSwipe(direction);
+        }
       }}
     >
       {/* Full-size invisible tap overlay for gallery cycling */}

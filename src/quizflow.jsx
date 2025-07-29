@@ -80,9 +80,11 @@ const QUESTIONS = [
 
 export default function QuizFlow({ onComplete }) {
   const [step, setStep] = useState(0)
-  console.log("Quiz step initialized:", step)
   const [answers, setAnswers] = useState({})
   const [error, setError] = useState(null)
+
+  // Ensure step is always valid
+  const validStep = Math.max(0, Math.min(step, QUESTIONS.length - 1))
 
   // Add error boundary
   if (error) {
@@ -103,13 +105,21 @@ export default function QuizFlow({ onComplete }) {
     )
   }
 
-  const current = QUESTIONS[step]
+  const current = QUESTIONS[validStep] || QUESTIONS[0]
   const total = QUESTIONS.length
+
+  // Debug logging
+  console.log('Quiz state:', { step, total, current: current?.id, currentText: current?.text })
 
   // Initialize component safely
   useEffect(() => {
     try {
       console.log('QuizFlow initialized with step:', step, 'total:', total);
+      console.log('Current question:', current);
+      console.log('Environment check:', {
+        hasApiKey: !!import.meta.env.VITE_TMDB_API_KEY,
+        apiKeyLength: import.meta.env.VITE_TMDB_API_KEY?.length
+      });
       if (!current) {
         setError('Failed to load quiz questions');
       }
@@ -121,7 +131,7 @@ export default function QuizFlow({ onComplete }) {
 
   function handleAnswer(val) {
     try {
-      console.log('handleAnswer called:', { val, step, current: current?.id })
+      console.log('handleAnswer called:', { val, step, validStep, total, current: current?.id })
       if (validStep >= total - 1) {
         setAnswers(a => {
           const next = { ...a, [current.id]: val };
@@ -170,6 +180,12 @@ export default function QuizFlow({ onComplete }) {
     onComplete(answers)
   }
 
+  function resetQuiz() {
+    setStep(0)
+    setAnswers({})
+    setError(null)
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#232946] to-[#6c3fa7] p-4">
       <div className="w-full max-w-md mx-auto rounded-3xl bg-white/10 shadow-2xl p-8 flex flex-col items-center relative" style={{backdropFilter: 'blur(8px)'}}>
@@ -178,23 +194,13 @@ export default function QuizFlow({ onComplete }) {
           <span className="text-lg font-bold text-white/90">Question {step + 1} of {total}</span>
           <span className="text-lg">{step < total - 1 ? '👉' : '🎬'}</span>
         </div>
-          <div
-          key={current.id}
-          initial={{ opacity: 0, y: 32 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -32 }}
-          transition={{ duration: 0.4, type: 'spring' }}
-          className="w-full"
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.3}
-          onDragEnd={(_, info) => {
-            if (info.offset.x > 80) handleSwipe('right');
-            else if (info.offset.x < -80) handleSwipe('left');
-          }}
-        >
-          <div className="text-2xl md:text-3xl font-extrabold text-white mb-2 text-center" style={{letterSpacing: 1}}>{current.text}</div>
-          <div className="text-base text-white/80 mb-6 text-center" style={{fontStyle: 'italic'}}>{current.description}</div>
+          <div className="w-full">
+          <div className="text-2xl md:text-3xl font-extrabold text-white mb-2 text-center" style={{letterSpacing: 1}}>
+            {current?.text || 'Loading question...'}
+          </div>
+          <div className="text-base text-white/80 mb-6 text-center" style={{fontStyle: 'italic'}}>
+            {current?.description || 'Please wait...'}
+          </div>
           {current.type === 'multi' ? (
             <>
               <div className="flex flex-wrap gap-2 justify-center mb-6">
@@ -253,6 +259,13 @@ export default function QuizFlow({ onComplete }) {
           >
               See My Matches
           </button>
+          ) : step > total - 1 ? (
+          <button
+              className="w-full mt-4 py-3 rounded-full bg-red-500 hover:bg-red-600 text-white font-bold text-lg shadow-xl transition"
+              onClick={resetQuiz}
+          >
+              Reset Quiz
+          </button>
           ) : null}
         </div>
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-row gap-1">
@@ -267,4 +280,4 @@ export default function QuizFlow({ onComplete }) {
       `}</style>
     </div>
   )
-}console.log("QUESTIONS array:", QUESTIONS.length, "First question:", QUESTIONS[0]?.text)
+}
