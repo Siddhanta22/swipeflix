@@ -84,6 +84,28 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
     }
   };
 
+  // Touch/swipe handlers
+  const handleTouchStart = (e) => {
+    if (!isTopCard) return;
+    const touch = e.touches[0];
+    setTouchStart(touch.clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isTopCard) return;
+    const touch = e.touches[0];
+    setTouchCurrent(touch.clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isTopCard) return;
+    const diff = touchStart - touchCurrent;
+    if (Math.abs(diff) > 50) {
+      const direction = diff > 0 ? 'like' : 'dislike';
+      onSwipe(direction);
+    }
+  };
+
   // Use 'NR' if certification is missing
   const certDisplay = certification && certification.trim() ? certification : 'NR';
 
@@ -101,24 +123,9 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
         position: 'fixed',
         zIndex: 10,
       }}
-      onTouchStart={(e) => {
-        if (!isTopCard) return;
-        const touch = e.touches[0];
-        setTouchStart(touch.clientX);
-      }}
-      onTouchMove={(e) => {
-        if (!isTopCard) return;
-        const touch = e.touches[0];
-        setTouchCurrent(touch.clientX);
-      }}
-      onTouchEnd={() => {
-        if (!isTopCard) return;
-        const diff = touchStart - touchCurrent;
-        if (Math.abs(diff) > 50) {
-          const direction = diff > 0 ? 'like' : 'dislike';
-          onSwipe(direction);
-        }
-      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Full-size invisible tap overlay for gallery cycling */}
       <div
