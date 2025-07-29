@@ -463,6 +463,16 @@ export default function App() {
     setWatchlist(getWatchlist());
   };
 
+  const toggleWatchlist = (movie) => {
+    if (isInWatchlist(movie.id)) {
+      removeFromWatchlist(movie.id);
+      setWatchlist(getWatchlist());
+    } else {
+      addToWatchlist(movie);
+      setWatchlist(getWatchlist());
+    }
+  };
+
   // Helper to load a card by ID (from watchlist)
   const loadCardById = async (id) => {
     const item = watchlist.find(m => m.id === id);
@@ -541,7 +551,7 @@ export default function App() {
         {/* Elegant glass card */}
         <div
           ref={homeCardRef}
-          className={`backdrop-blur-lg bg-white/15 rounded-3xl shadow-2xl px-8 py-12 md:px-16 md:py-16 flex flex-col items-center animate-fade-in transition-transform duration-700 ${swipeOut ? 'swipe-out' : ''}`}
+          className={`backdrop-blur-lg bg-white/15 rounded-3xl shadow-2xl px-8 py-12 md:px-16 md:py-16 flex flex-col items-center animate-fade-in transition-transform duration-700 hover:scale-105 ${swipeOut ? 'swipe-out' : ''}`}
           style={{maxWidth: 420, border: '2px solid #fff4', boxShadow: '0 8px 48px #23294644'}}
         >
           {/* Swipe card logo above SwipeFlix */}
@@ -572,7 +582,7 @@ export default function App() {
               setSwipeOut(true);
               setTimeout(() => setShowHome(false), 650);
             }}
-            className="px-10 py-4 rounded-full font-extrabold text-xl shadow-xl transition-transform animate-fade-in border-2 border-white/30 glassy-swipe-btn"
+            className="px-10 py-4 rounded-full font-extrabold text-xl shadow-xl transition-transform animate-fade-in border-2 border-white/30 glassy-swipe-btn animate-pulse"
             style={{
               background: 'rgba(44, 44, 84, 0.45)',
               color: '#fff',
@@ -583,7 +593,7 @@ export default function App() {
               border: '2px solid #fff4',
             }}
           >
-            Start Swiping
+            🎬 Start Swiping
           </button>
         </div>
         {/* Vignette overlay for depth */}
@@ -686,15 +696,34 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 text-white">
       
       {/* Rest of the app */}
       {showQuiz ? (
         <QuizFlow onComplete={handleQuizComplete} />
+      ) : isLoading ? (
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <div className="text-center space-y-6">
+            <div className="animate-pulse">
+              <div className="w-24 h-24 mx-auto bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center mb-4">
+                <span className="text-4xl">🎬</span>
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Finding Your Perfect Matches...
+            </h1>
+            <p className="text-gray-300 text-lg">Discovering movies just for you</p>
+            <div className="flex space-x-2 justify-center">
+              <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="relative min-h-screen bg-black text-white overflow-hidden flex flex-col items-center justify-center">
       {/* Filter Bar + Reset Button */}
-      <div className="fixed top-0 left-0 w-full z-50 flex flex-row items-center gap-3 px-4 pt-4 bg-black/70 backdrop-blur-md overflow-x-auto whitespace-nowrap" style={{minHeight: 60}}>
+                    <div className="fixed top-0 left-0 w-full z-50 flex flex-row items-center gap-3 px-4 pt-4 bg-gradient-to-r from-black/80 to-purple-900/80 backdrop-blur-md overflow-x-auto whitespace-nowrap border-b border-purple-500/30" style={{minHeight: 60}}>
         {/* Type Filter */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-gray-300 mr-2">Type:</span>
@@ -770,26 +799,38 @@ export default function App() {
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center justify-center gap-8 z-50">
               <button
                 onClick={() => handleSwipe(currentCard, 'dislike')}
-                className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center text-3xl shadow-lg hover:bg-red-700 transition border-4 border-white"
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-red-500 to-red-600 flex items-center justify-center text-3xl shadow-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 transform hover:scale-110 border-4 border-white/20 backdrop-blur-sm"
                 aria-label="Dislike"
-                style={{boxShadow: '0 4px 16px rgba(0,0,0,0.5)'}}
+                style={{boxShadow: '0 8px 32px rgba(239, 68, 68, 0.3)'}}
               >
                 <span style={{color: 'white', fontWeight: 'bold', fontSize: 36, lineHeight: 1}}>&#10006;</span>
               </button>
+              
+              <button
+                onClick={() => toggleWatchlist(currentCard)}
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center text-3xl shadow-lg hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 transform hover:scale-110 border-4 border-white/20 backdrop-blur-sm"
+                aria-label="Add to Watchlist"
+                style={{boxShadow: '0 8px 32px rgba(245, 158, 11, 0.3)'}}
+              >
+                ⭐
+              </button>
+              
               <button
                 onClick={() => setShowWatchlist(true)}
-                className="w-16 h-16 rounded-full bg-yellow-400 flex items-center justify-center text-3xl shadow-lg hover:bg-yellow-500 transition border-4 border-white mx-2"
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-3xl shadow-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-110 border-4 border-white/20 backdrop-blur-sm"
                 aria-label="My Watchlist"
-                style={{boxShadow: '0 4px 16px rgba(0,0,0,0.5)'}}
+                style={{boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)'}}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#222" className="w-8 h-8">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="white" className="w-8 h-8">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.75.75 0 0 1 1.04 0l2.348 2.382 3.284.478a.75.75 0 0 1 .416 1.28l-2.377 2.32.561 3.27a.75.75 0 0 1-1.088.791L12 12.347l-2.94 1.543a.75.75 0 0 1-1.088-.79l.56-3.271-2.376-2.32a.75.75 0 0 1 .416-1.28l3.284-.478 2.348-2.382z" />
                 </svg>
               </button>
+              
               <button
                 onClick={() => handleSwipe(currentCard, 'like')}
-                className="w-16 h-16 rounded-full bg-green-600 flex items-center justify-center text-3xl shadow-lg hover:bg-green-700 transition"
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center text-3xl shadow-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 transform hover:scale-110 border-4 border-white/20 backdrop-blur-sm"
                 aria-label="Like"
+                style={{boxShadow: '0 8px 32px rgba(34, 197, 94, 0.3)'}}
               >
                 ❤️
               </button>
@@ -801,7 +842,7 @@ export default function App() {
       {/* Watchlist Modal */}
       {showWatchlist && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur" style={{animation: 'fadeIn 0.2s'}}>
-          <div className="bg-zinc-900 rounded-2xl shadow-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto relative">
+          <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl shadow-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto relative border border-purple-500/20">
             <button
               onClick={() => setShowWatchlist(false)}
               className="absolute top-3 right-3 text-white/70 hover:text-white text-2xl font-bold"
@@ -809,15 +850,19 @@ export default function App() {
             >
               ×
             </button>
-            <h2 className="text-xl font-bold text-yellow-400 mb-4">My Watchlist</h2>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent mb-4">⭐ My Watchlist</h2>
             {watchlist.length === 0 ? (
-              <p className="text-gray-400">Your watchlist is empty.</p>
+              <div className="text-center py-8">
+                <div className="text-6xl mb-4">📺</div>
+                <p className="text-gray-400 text-lg">Your watchlist is empty.</p>
+                <p className="text-gray-500 text-sm mt-2">Start swiping to add movies!</p>
+              </div>
             ) : (
               <ul className="space-y-4">
                 {watchlist.map((item) => (
                   <li
                     key={item.id}
-                    className="flex items-center gap-4 bg-zinc-800 rounded-lg p-3 cursor-pointer hover:bg-zinc-700 transition"
+                    className="flex items-center gap-4 bg-gradient-to-r from-zinc-800 to-zinc-700 rounded-lg p-3 cursor-pointer hover:from-zinc-700 hover:to-zinc-600 transition-all duration-200 transform hover:scale-105 border border-zinc-600/50"
                     onClick={() => loadCardById(item.id)}
                   >
                     <img src={item.images?.[0] || 'https://placehold.co/80x120/222/fff?text=No+Image'} alt={item.title} className="w-14 h-20 object-cover rounded-lg border border-zinc-700" />
