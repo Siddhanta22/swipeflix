@@ -4,7 +4,7 @@
 export function saveToStorage(key, value) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value))
-  } catch (_) { /* ignore */ }
+  } catch { /* localStorage unavailable or quota exceeded; ignore */ }
 }
 
 /** Safely load and parse a JSON value from localStorage */
@@ -12,7 +12,7 @@ export function loadFromStorage(key) {
   try {
     const v = window.localStorage.getItem(key)
     return v == null ? null : JSON.parse(v)
-  } catch (_) {
+  } catch {
     return null
   }
 }

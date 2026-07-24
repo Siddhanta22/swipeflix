@@ -1,78 +1,63 @@
 // src/SwipeCard.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 
 import { addToWatchlist, removeFromWatchlist, isInWatchlist } from './storage';
 
 const FALLBACK_IMAGE = 'https://placehold.co/800x1200/222/fff?text=No+Image';
+const SWIPE_THRESHOLD = 50;
 
-export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx }) {
+const SwipeCard = forwardRef(function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx }, ref) {
   const { title, year, description, images, rating, cast, providers, certification, genres } = movie;
   const [imgError, setImgError] = useState(false);
   const [inWatchlist, setInWatchlist] = useState(isInWatchlist(movie.id));
   const [touchStart, setTouchStart] = useState(0);
   const [touchCurrent, setTouchCurrent] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-
-
-
-  const handleTap = (e) => {
-    if (!isTopCard) return;
-
-    const { clientX, currentTarget } = e;
-    if (!currentTarget) return;
-    const { left, width } = currentTarget.getBoundingClientRect();
-    const tapPosition = clientX - left;
-    const imageCount = images?.length || 1;
-
-    if (tapPosition > width / 2) {
-      if (imgIdx < imageCount - 1) {
-        setImgIdx(imgIdx + 1);
-      } else {
-        // Trigger shake animation (removed for SSR compatibility)
-      }
-    } else {
-      if (imgIdx > 0) {
-        setImgIdx(imgIdx - 1);
-      } else {
-        // Trigger shake animation (removed for SSR compatibility)
-      }
-    }
-  };
+  const [exiting, setExiting] = useState(null); // null | 'like' | 'dislike'
+  const wasDragRef = useRef(false);
 
   // Gallery tap handler
   const handleGalleryTap = (e) => {
     if (!isTopCard) return;
+    if (wasDragRef.current) {
+      wasDragRef.current = false;
+      return;
+    }
     const { clientX, currentTarget } = e;
     if (!currentTarget) return;
     const { left, width } = currentTarget.getBoundingClientRect();
     const tapPosition = clientX - left;
     const imageCount = images?.length || 1;
     if (tapPosition > width / 2) {
-      if (imgIdx < imageCount - 1) {
-        setImgIdx(imgIdx + 1);
-      } else {
-        // Trigger shake animation (removed for SSR compatibility)
-      }
+      if (imgIdx < imageCount - 1) setImgIdx(imgIdx + 1);
     } else {
-      if (imgIdx > 0) {
-        setImgIdx(imgIdx - 1);
-      } else {
-        // Trigger shake animation (removed for SSR compatibility)
-      }
+      if (imgIdx > 0) setImgIdx(imgIdx - 1);
     }
   };
 
   useEffect(() => {
     setImgIdx(0);
-    setImgError(false);
     setInWatchlist(isInWatchlist(movie.id));
   }, [movie]);
 
-  let currImg = (images && images[imgIdx]) || FALLBACK_IMAGE;
-  if (!images || !Array.isArray(images) || images.length === 0) {
-    currImg = FALLBACK_IMAGE;
-  }
-  if (imgError) currImg = FALLBACK_IMAGE;
+  const rawImg = (Array.isArray(images) && images[imgIdx]) || FALLBACK_IMAGE;
+
+  // Background images are set via CSS, which has no onError of its own —
+  // preload the candidate URL so a failed/broken image still falls back.
+  useEffect(() => {
+    if (rawImg === FALLBACK_IMAGE) {
+      setImgError(false);
+      return;
+    }
+    let cancelled = false;
+    setImgError(false);
+    const img = new Image();
+    img.onerror = () => { if (!cancelled) setImgError(true); };
+    img.src = rawImg;
+    return () => { cancelled = true; };
+  }, [rawImg]);
+
+  const currImg = imgError ? FALLBACK_IMAGE : rawImg;
 
   const handleWatchlist = (e) => {
     e.stopPropagation();
@@ -85,34 +70,55 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
     }
   };
 
+  const deltaX = isDragging ? touchCurrent - touchStart : 0;
+
+  // Play the fly-off animation, then tell the parent to advance. Shared by
+  // both the drag gesture below and the external action buttons in App.jsx.
+  const triggerExit = (direction) => {
+    if (exiting) return;
+    setIsDragging(false);
+    setExiting(direction);
+    setTimeout(() => onSwipe(direction), 300);
+  };
+
+  useImperativeHandle(ref, () => ({ swipe: triggerExit }));
+
+  // Release the drag: either snap back, or confirm the swipe.
+  const finishDrag = () => {
+    if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+      wasDragRef.current = true;
+      triggerExit(deltaX > 0 ? 'like' : 'dislike');
+    } else {
+      setIsDragging(false);
+      wasDragRef.current = Math.abs(deltaX) > 10;
+      setTouchStart(0);
+      setTouchCurrent(0);
+    }
+  };
+
   // Touch/swipe handlers
   const handleTouchStart = (e) => {
-    if (!isTopCard) return;
+    if (!isTopCard || exiting) return;
     const touch = e.touches[0];
     setTouchStart(touch.clientX);
     setTouchCurrent(touch.clientX);
+    setIsDragging(true);
   };
 
   const handleTouchMove = (e) => {
-    if (!isTopCard) return;
+    if (!isTopCard || !isDragging) return;
     const touch = e.touches[0];
     setTouchCurrent(touch.clientX);
   };
 
   const handleTouchEnd = () => {
-    if (!isTopCard) return;
-    const diff = touchStart - touchCurrent;
-    console.log('Swipe detected:', { diff, touchStart, touchCurrent });
-    if (Math.abs(diff) > 50) {
-      const direction = diff > 0 ? 'like' : 'dislike';
-      console.log('Swipe direction:', direction);
-      onSwipe(direction);
-    }
+    if (!isTopCard || !isDragging) return;
+    finishDrag();
   };
 
   // Mouse drag handlers for desktop
   const handleMouseDown = (e) => {
-    if (!isTopCard) return;
+    if (!isTopCard || exiting) return;
     setIsDragging(true);
     setTouchStart(e.clientX);
     setTouchCurrent(e.clientX);
@@ -125,18 +131,29 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
 
   const handleMouseUp = () => {
     if (!isTopCard || !isDragging) return;
-    setIsDragging(false);
-    const diff = touchStart - touchCurrent;
-    console.log('Mouse swipe detected:', { diff, touchStart, touchCurrent });
-    if (Math.abs(diff) > 50) {
-      const direction = diff > 0 ? 'like' : 'dislike';
-      console.log('Mouse swipe direction:', direction);
-      onSwipe(direction);
-    }
+    finishDrag();
   };
 
   // Use 'NR' if certification is missing
   const certDisplay = certification && certification.trim() ? certification : 'NR';
+
+  // Keep the synopsis short so it can't push the card taller than the
+  // like/dislike buttons anchored at the bottom of the screen.
+  const shortDescription =
+    description && description.length > 200 ? `${description.slice(0, 200).trim()}…` : description;
+
+  const rotation = deltaX / 20;
+  let cardTransform = 'translate(0, 0) rotate(0deg)';
+  let cardTransition = isDragging ? 'none' : 'transform 0.3s ease';
+  if (exiting) {
+    const dir = exiting === 'like' ? 1 : -1;
+    cardTransform = `translate(${dir * 1200}px, -80px) rotate(${dir * 30}deg)`;
+    cardTransition = 'transform 0.3s ease-in, opacity 0.3s ease-in';
+  } else if (isDragging) {
+    cardTransform = `translate(${deltaX}px, 0) rotate(${rotation}deg)`;
+  }
+  const likeOpacity = Math.min(Math.max(deltaX / 100, 0), 1);
+  const nopeOpacity = Math.min(Math.max(-deltaX / 100, 0), 1);
 
   // Full-screen swipeable card with image gallery and text overlay
   return (
@@ -151,6 +168,9 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
         color: 'white',
         position: 'fixed',
         zIndex: 10,
+        transform: cardTransform,
+        transition: cardTransition,
+        opacity: exiting ? 0 : 1,
       }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -166,6 +186,19 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
         style={{cursor: 'pointer', pointerEvents: 'none', background: 'transparent'}}
         onClick={handleGalleryTap}
       />
+      {/* Like/Nope drag feedback badges */}
+      <div
+        className="absolute top-12 left-8 z-40 border-4 border-green-400 text-green-400 font-extrabold text-3xl px-4 py-1 rounded-lg"
+        style={{opacity: likeOpacity, transform: 'rotate(-15deg)', pointerEvents: 'none'}}
+      >
+        LIKE
+      </div>
+      <div
+        className="absolute top-12 right-8 z-40 border-4 border-red-500 text-red-500 font-extrabold text-3xl px-4 py-1 rounded-lg"
+        style={{opacity: nopeOpacity, transform: 'rotate(15deg)', pointerEvents: 'none'}}
+      >
+        NOPE
+      </div>
       {/* Left/Right arrows for desktop */}
       {images?.length > 1 && (
         <>
@@ -189,16 +222,22 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
           </button>
         </>
       )}
-      {/* Glassmorphism Text box overlay - pointer-events-none so it doesn't block taps */}
+      {/* Glassmorphism Text box overlay - pointer-events-none so it doesn't block taps.
+          Capped height + hidden overflow so long descriptions/cast lists never grow
+          tall enough to sit under the like/dislike buttons. */}
       <div
         className="backdrop-blur"
         style={{
           background: 'rgba(255,255,255,0.03)',
           borderRadius: 24,
           padding: 32,
+          paddingBottom: 24,
           width: '100%',
           maxWidth: 540,
+          maxHeight: 'calc(100vh - 210px)',
+          overflow: 'hidden',
           margin: 40,
+          marginBottom: 132,
           pointerEvents: 'none',
           position: 'relative',
           border: '1.5px solid rgba(255,255,255,0.12)',
@@ -243,7 +282,7 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
             ))}
           </div>
         )}
-        <p style={{fontSize: 18, marginBottom: cast && cast.length ? 16 : 0}}>{description}</p>
+        <p style={{fontSize: 18, marginBottom: cast && cast.length ? 16 : 0}}>{shortDescription}</p>
         <div className="flex flex-row items-center gap-2 mt-2 overflow-x-auto">
           {cast && cast.length > 0 && (
             <div className="flex flex-row items-center gap-2">
@@ -324,4 +363,6 @@ export default function SwipeCard({ movie, onSwipe, isTopCard, imgIdx, setImgIdx
       </div>
     </div>
   );
-}
+});
+
+export default SwipeCard;

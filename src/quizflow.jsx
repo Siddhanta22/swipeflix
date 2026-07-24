@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import FloatingIcons from './FloatingIcons'
+import PlatformLogo from './PlatformLogos'
 
 const QUESTIONS = [
   {
@@ -7,38 +9,38 @@ const QUESTIONS = [
     emoji: '📺',
     type: 'multi',
     options: [
-      { key: 'netflix', label: 'Netflix' },
-      { key: 'prime', label: 'Prime Video' },
-      { key: 'disney', label: 'Disney+' },
-      { key: 'hulu', label: 'Hulu' },
-      { key: 'apple', label: 'Apple TV+' },
-      { key: 'paramount', label: 'Paramount+' },
+      { key: 'netflix', label: 'Netflix', logo: 'netflix', accent: 'from-slate-700 to-slate-900' },
+      { key: 'prime', label: 'Prime Video', logo: 'prime', accent: 'from-slate-700 to-slate-900' },
+      { key: 'disney', label: 'Disney+', logo: 'disney', accent: 'from-slate-700 to-slate-900' },
+      { key: 'hulu', label: 'Hulu', logo: 'hulu', accent: 'from-slate-700 to-slate-900' },
+      { key: 'apple', label: 'Apple TV+', logo: 'apple', accent: 'from-slate-700 to-slate-900' },
+      { key: 'paramount', label: 'Paramount+', logo: 'paramount', accent: 'from-slate-700 to-slate-900' },
     ],
     description: 'Pick your favorites!'
   },
-  { 
-    id: 'mood',  
+  {
+    id: 'mood',
     text: 'What mood are you in today?',
     emoji: '🎭',
     type: 'single',
     options: [
-      { key: 'action', label: 'Action & Adventure', emoji: '💥' },
-      { key: 'comedy', label: 'Laugh & Relax', emoji: '😂' },
-      { key: 'drama', label: 'Deep & Emotional', emoji: '🎭' },
-      { key: 'romance', label: 'Love & Romance', emoji: '💕' },
+      { key: 'action', label: 'Fast & Thrilling', emoji: '⚡', accent: 'from-orange-500 to-red-700' },
+      { key: 'comedy', label: 'Light & Silly', emoji: '😂', accent: 'from-yellow-400 to-orange-600' },
+      { key: 'drama', label: 'Slow & Emotional', emoji: '🥹', accent: 'from-indigo-500 to-blue-800' },
+      { key: 'romance', label: 'Warm & Sweet', emoji: '💕', accent: 'from-pink-500 to-rose-700' },
     ],
     description: 'What sounds good right now?'
   },
-  { 
-    id: 'genre', 
+  {
+    id: 'genre',
     text: 'Which genre calls to you?',
     emoji: '🎬',
     type: 'single',
     options: [
-      { key: 'sci-fi', label: 'Sci-Fi & Fantasy', emoji: '🚀' },
-      { key: 'horror', label: 'Thriller & Horror', emoji: '👻' },
-      { key: 'comedy', label: 'Comedy & Fun', emoji: '🎪' },
-      { key: 'drama', label: 'Drama & Realism', emoji: '🎭' },
+      { key: 'sci-fi', label: 'Sci-Fi & Fantasy', emoji: '🚀', accent: 'from-violet-500 to-purple-800' },
+      { key: 'horror', label: 'Thriller & Horror', emoji: '👻', accent: 'from-red-800 to-black' },
+      { key: 'comedy', label: 'Comedy & Fun', emoji: '🎪', accent: 'from-yellow-400 to-orange-600' },
+      { key: 'drama', label: 'Drama & Realism', emoji: '🎭', accent: 'from-slate-500 to-blue-800' },
     ],
     description: 'Pick your vibe!'
   },
@@ -48,10 +50,10 @@ const QUESTIONS = [
     emoji: '🌟',
     type: 'single',
     options: [
-      { key: 'hidden-gems', label: 'Hidden Gems', emoji: '💎' },
-      { key: 'popular', label: 'Popular Hits', emoji: '🔥' },
-      { key: 'classics', label: 'Timeless Classics', emoji: '⭐' },
-      { key: 'trending', label: 'Trending Now', emoji: '📈' },
+      { key: 'hidden-gems', label: 'Hidden Gems', emoji: '💎', accent: 'from-teal-500 to-cyan-800' },
+      { key: 'popular', label: 'Popular Hits', emoji: '🔥', accent: 'from-red-500 to-orange-700' },
+      { key: 'classics', label: 'Timeless Classics', emoji: '⭐', accent: 'from-amber-400 to-yellow-700' },
+      { key: 'trending', label: 'Trending Now', emoji: '📈', accent: 'from-emerald-500 to-green-800' },
     ],
     description: 'What are you in the mood for?'
   },
@@ -61,10 +63,10 @@ const QUESTIONS = [
     emoji: '🍿',
     type: 'single',
     options: [
-      { key: 'binge', label: 'Binge Everything!', emoji: '🍿' },
-      { key: 'casual', label: 'Casual Viewing', emoji: '😌' },
-      { key: 'selective', label: 'Very Selective', emoji: '🎯' },
-      { key: 'explore', label: 'Love Exploring', emoji: '🔍' },
+      { key: 'binge', label: 'Binge Everything!', emoji: '🍿', accent: 'from-purple-500 to-pink-700' },
+      { key: 'casual', label: 'Casual Viewing', emoji: '😌', accent: 'from-sky-400 to-blue-700' },
+      { key: 'selective', label: 'Very Selective', emoji: '🎯', accent: 'from-slate-400 to-slate-700' },
+      { key: 'explore', label: 'Love Exploring', emoji: '🔍', accent: 'from-emerald-400 to-teal-700' },
     ],
     description: 'Your watching style!'
   },
@@ -74,9 +76,32 @@ export default function QuizFlow({ onComplete }) {
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState({})
   const [error, setError] = useState(null)
+  const [selectedOption, setSelectedOption] = useState(null)
+  const [isAdvancing, setIsAdvancing] = useState(false)
 
   // Ensure step is always valid
   const validStep = Math.max(0, Math.min(step, QUESTIONS.length - 1))
+  const current = QUESTIONS[validStep] || QUESTIONS[0]
+  const total = QUESTIONS.length
+
+  // Initialize component safely (hooks must run on every render, so these
+  // stay above the error early-return below)
+  useEffect(() => {
+    try {
+      if (!current) {
+        setError('Failed to load quiz questions');
+      }
+    } catch (err) {
+      console.error('Error initializing QuizFlow:', err);
+      setError('Failed to initialize quiz');
+    }
+  }, [step, total, current]);
+
+  // Reset the single-select highlight whenever the question changes
+  useEffect(() => {
+    setSelectedOption(null)
+    setIsAdvancing(false)
+  }, [step])
 
   // Add error boundary
   if (error) {
@@ -86,7 +111,7 @@ export default function QuizFlow({ onComplete }) {
           <div className="text-2xl mb-4">⚠️</div>
           <div className="text-xl font-bold text-white mb-2">Something went wrong</div>
           <div className="text-white/80 mb-4 text-center">{error}</div>
-          <button 
+          <button
             className="px-6 py-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white font-bold"
             onClick={() => window.location.reload()}
           >
@@ -97,37 +122,11 @@ export default function QuizFlow({ onComplete }) {
     )
   }
 
-  const current = QUESTIONS[validStep] || QUESTIONS[0]
-  const total = QUESTIONS.length
-
-  // Debug logging
-  console.log('Quiz state:', { step, total, current: current?.id, currentText: current?.text })
-
-  // Initialize component safely
-  useEffect(() => {
+  function advance(val) {
     try {
-      console.log('QuizFlow initialized with step:', step, 'total:', total);
-      console.log('Current question:', current);
-      console.log('Environment check:', {
-        hasApiKey: !!import.meta.env.VITE_TMDB_API_KEY,
-        apiKeyLength: import.meta.env.VITE_TMDB_API_KEY?.length
-      });
-      if (!current) {
-        setError('Failed to load quiz questions');
-      }
-    } catch (err) {
-      console.error('Error initializing QuizFlow:', err);
-      setError('Failed to initialize quiz');
-    }
-  }, [step, total, current]);
-
-  function handleAnswer(val) {
-    try {
-      console.log('handleAnswer called:', { val, step, validStep, total, current: current?.id })
       if (validStep >= total - 1) {
         setAnswers(a => {
           const next = { ...a, [current.id]: val };
-          console.log('Quiz completed, calling onComplete with:', next);
           onComplete(next);
           return next;
         });
@@ -136,9 +135,58 @@ export default function QuizFlow({ onComplete }) {
         setTimeout(() => setStep(s => Math.min(s + 1, total - 1)), 350);
       }
     } catch (err) {
-      console.error('Error in handleAnswer:', err);
+      console.error('Error advancing quiz:', err);
       setError(err.message || 'An error occurred while processing your answer');
     }
+  }
+
+  // Used by multi-select Next/Skip, which already show selection via checkboxes
+  function handleAnswer(val) {
+    advance(val)
+  }
+
+  // Used by single-select options: flash the pick, then advance
+  function handleSingleSelect(key) {
+    if (isAdvancing) return
+    setIsAdvancing(true)
+    setSelectedOption(key)
+    setTimeout(() => advance(key), 300)
+  }
+
+  function goBack() {
+    if (validStep === 0) return
+    setStep(s => Math.max(0, s - 1))
+  }
+
+  // Shared tile markup for both single- and multi-select options: a colored
+  // accent wash that intensifies on hover/selection, with a checkmark badge
+  // when selected.
+  function OptionTile({ opt, selected, disabled, onClick, emojiSize = 'text-3xl' }) {
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        className={`group relative overflow-hidden rounded-2xl border-2 p-4 transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100 ${selected ? 'border-white shadow-lg scale-105' : 'border-white/20 hover:border-white/50'}`}
+      >
+        <div
+          className={`absolute inset-0 bg-gradient-to-br ${opt.accent || 'from-slate-600 to-slate-800'} transition-opacity duration-200 ${selected ? 'opacity-90' : 'opacity-30 group-hover:opacity-55'}`}
+        />
+        <div className="relative flex flex-col items-center gap-2">
+          {opt.logo ? (
+            <PlatformLogo id={opt.logo} size={40} />
+          ) : (
+            opt.emoji && <span className={emojiSize}>{opt.emoji}</span>
+          )}
+          <span className="font-semibold text-white text-center leading-tight">{opt.label}</span>
+        </div>
+        {selected && (
+          <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white text-purple-700 flex items-center justify-center text-sm font-bold shadow">
+            ✓
+          </span>
+        )}
+      </button>
+    );
   }
 
   function handleMultiSelect(key) {
@@ -152,41 +200,34 @@ export default function QuizFlow({ onComplete }) {
     })
   }
 
-  function handleSwipe(direction) {
-    if (current.type === 'multi') {
-      if (direction === 'right') {
-        handleAnswer(answers[current.id] || []);
-      } else if (direction === 'left') {
-        handleAnswer([]);
-      }
-    } else {
-      if (direction === 'right') {
-        handleAnswer(true);
-      } else if (direction === 'left') {
-        handleAnswer(false);
-      }
-    }
-  }
-
-  function handleSubmit() {
-    onComplete(answers)
-  }
-
-  function resetQuiz() {
-    setStep(0)
-    setAnswers({})
-    setError(null)
-  }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-900 via-black to-blue-900 p-4">
-      <div className="w-full max-w-lg mx-auto rounded-3xl bg-gradient-to-br from-white/10 to-white/5 shadow-2xl p-8 flex flex-col items-center relative border border-white/20" style={{backdropFilter: 'blur(8px)'}}>
-        <div className="flex flex-row items-center gap-3 mb-6">
-          <span className="text-4xl animate-bounce">{current.emoji}</span>
-          <span className="text-lg font-semibold text-purple-300">Question {step + 1} of {total}</span>
-          <span className="text-2xl">{step < total - 1 ? '👉' : '🎬'}</span>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-900 via-black to-blue-900 p-4 relative overflow-hidden animate-gradient-pan">
+      <FloatingIcons dim />
+      <div className="w-full max-w-lg mx-auto rounded-3xl bg-gradient-to-br from-white/10 to-white/5 shadow-2xl p-8 flex flex-col items-center relative border border-white/20" style={{backdropFilter: 'blur(8px)', zIndex: 1}}>
+        {/* Progress bar + back button */}
+        <div className="w-full flex items-center gap-3 mb-6">
+          <button
+            type="button"
+            onClick={goBack}
+            disabled={validStep === 0}
+            aria-label="Previous question"
+            className="text-white/70 hover:text-white disabled:opacity-0 disabled:pointer-events-none transition text-2xl leading-none"
+          >
+            ←
+          </button>
+          <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-purple-400 to-yellow-400 transition-all duration-300 ease-out"
+              style={{ width: `${((step + 1) / total) * 100}%` }}
+            />
+          </div>
+          <span className="text-sm font-semibold text-purple-300 whitespace-nowrap">{step + 1} / {total}</span>
         </div>
-          <div className="w-full">
+        <div className="mb-2" key={`emoji-${current.id}`}>
+          <span className="text-5xl animate-emoji-pop inline-block">{current.emoji}</span>
+        </div>
+          <div className="w-full animate-question-enter" key={current.id}>
           <div className="text-3xl md:text-4xl font-bold text-white mb-4 text-center leading-tight" style={{letterSpacing: 1}}>
             {current?.text || 'Loading question...'}
           </div>
@@ -197,16 +238,13 @@ export default function QuizFlow({ onComplete }) {
             <>
               <div className="grid grid-cols-2 gap-3 mb-8">
                 {current.options.map(opt => (
-                  <button
+                  <OptionTile
                     key={opt.key}
-                    className={`p-4 rounded-xl font-semibold text-base transition-all duration-200 transform hover:scale-105 border-2 ${answers[current.id]?.includes(opt.key) ? 'bg-gradient-to-r from-blue-500 to-purple-600 border-blue-400 text-white shadow-lg' : 'bg-white/10 border-white/30 text-white/90 hover:bg-white/20 hover:border-white/50'}`}
+                    opt={opt}
+                    selected={!!answers[current.id]?.includes(opt.key)}
                     onClick={() => handleMultiSelect(opt.key)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {opt.emoji && <span className="text-xl">{opt.emoji}</span>}
-                      <span>{opt.label}</span>
-                    </div>
-                  </button>
+                    emojiSize="text-2xl"
+                  />
                 ))}
               </div>
               <div className="flex flex-row gap-4 justify-center mb-2">
@@ -226,47 +264,32 @@ export default function QuizFlow({ onComplete }) {
               </div>
             </>
           ) : (
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              {current.options?.map(opt => (
+            <>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {current.options?.map(opt => (
+                  <OptionTile
+                    key={opt.key}
+                    opt={opt}
+                    selected={selectedOption === opt.key}
+                    disabled={isAdvancing}
+                    onClick={() => handleSingleSelect(opt.key)}
+                  />
+                ))}
+              </div>
+              <div className="text-center mb-4">
                 <button
-                  key={opt.key}
-                  className="p-4 rounded-xl font-semibold text-base transition-all duration-200 transform hover:scale-105 border-2 bg-white/10 border-white/30 text-white/90 hover:bg-white/20 hover:border-white/50"
-                  onClick={() => handleAnswer(opt.key)}
+                  type="button"
+                  onClick={() => handleSingleSelect(null)}
+                  disabled={isAdvancing}
+                  className="text-sm text-white/50 hover:text-white/80 underline transition disabled:opacity-0"
                 >
-                  <div className="flex items-center gap-3">
-                    {opt.emoji && <span className="text-2xl">{opt.emoji}</span>}
-                    <span>{opt.label}</span>
-                  </div>
+                  Skip
                 </button>
-              ))}
-            </div>
+              </div>
+            </>
           )}
-          {step === total - 1 ? (
-          <button
-              className="w-full mt-4 py-3 rounded-full bg-gradient-to-r from-yellow-400 to-pink-400 text-black font-extrabold text-lg shadow-xl hover:scale-105 transition"
-              onClick={handleSubmit}
-          >
-              See My Matches
-          </button>
-          ) : step > total - 1 ? (
-          <button
-              className="w-full mt-4 py-3 rounded-full bg-red-500 hover:bg-red-600 text-white font-bold text-lg shadow-xl transition"
-              onClick={resetQuiz}
-          >
-              Reset Quiz
-          </button>
-          ) : null}
-        </div>
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-row gap-1">
-          {QUESTIONS.map((q, i) => (
-            <span key={q.id} className={`w-3 h-3 rounded-full ${i === step ? 'bg-yellow-400' : 'bg-white/30'} transition-all`} />
-          ))}
         </div>
       </div>
-      <style>{`
-        .animate-fade-in { animation: fadeIn 1.2s both; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(24px);} to { opacity: 1; transform: none; } }
-      `}</style>
     </div>
   )
 }
