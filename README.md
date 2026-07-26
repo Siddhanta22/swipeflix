@@ -1,31 +1,68 @@
-# <img width="1511" height="824" alt="Screenshot 2025-11-07 at 3 45 54 PM" src="https://github.com/user-attachments/assets/a91eee07-c6a9-46ea-92eb-7100fa877110" /><img width="1512" height="825" alt="Screenshot 2025-11-07 at 3 46 32 PM" src="https://github.com/user-attachments/assets/67e3a23b-a340-4d02-9dfb-1378981da15a" /><img width="1511" height="824" alt="Screenshot 2025-11-07 at 3 47 07 PM" src="https://github.com/user-attachments/assets/0935d1a7-96b3-486d-afc9-1fd25980074d" />
+# SwipeFlix 🎬
 
+A swipe-based movie & TV discovery app. Take a quick quiz, then swipe through personalized picks pulled live from [TMDB](https://www.themoviedb.org/), with filters for genre, rating, language, and streaming platform — plus a Spotify-Wrapped-style recap of your session.
 
-React + Vite
+**Live demo:** [swipeflix-alpha.vercel.app](https://swipeflix-alpha.vercel.app/)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-![Uploading Screenshot 2025-11-07 at 3.45.23 PM.png…]()
+## Features
 
-Currently, two official plugins are available:
+- **Onboarding quiz** — 5 questions (streaming platforms, mood, genre, the kind of experience you want, how you like to watch) that feed a weighted scoring algorithm biasing genre match, popularity/recency, and movie-vs-TV format
+- **Swipe deck** — hand-built drag-follow and fly-off gesture animations (no animation library), showing rating, genres, cast, age certification, and where each title is streaming
+- **Filters** — type (movie/TV), minimum rating, age rating, language, genre, and streaming platform, all live-applied to the deck
+- **Watchlist** — save titles for later, persisted in `localStorage`
+- **Similar titles** — pulls related picks when you like something
+- **Session recap** — a tappable, story-style summary of what you swiped: like/dislike split, top genre, a computed "taste archetype," and your top-rated pick
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tech stack
 
-## Expanding the ESLint configuration
+- [React 19](https://react.dev/) + [Vite](https://vitejs.dev/)
+- [Tailwind CSS v4](https://tailwindcss.com/)
+- [TMDB API](https://www.themoviedb.org/documentation/api) for movie/TV data
+- Plain CSS keyframe animations (no Framer Motion or other animation library)
+- `localStorage` for watchlist persistence
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-# Updated Tue Jul 29 11:28:03 IST 2025
-# Fixed white screen issue Tue Jul 29 12:23:12 IST 2025
-# Debug version Tue Jul 29 12:27:04 IST 2025
-# Quiz flow fix Tue Jul 29 12:29:31 IST 2025
-# Additional debugging Tue Jul 29 12:29:47 IST 2025
-# Quiz flow fix - syntax corrected Tue Jul 29 14:02:00 IST 2025
-# Final quiz flow fix Tue Jul 29 14:02:22 IST 2025
-# Quiz flow fix - syntax corrected Tue Jul 29 14:03:21 IST 2025
-# Final quiz flow fix Tue Jul 29 14:03:43 IST 2025
-# Syntax fix completed Tue Jul 29 14:05:08 IST 2025
-# Syntax fix completed Tue Jul 29 14:06:05 IST 2025
-# Syntax fix completed Tue Jul 29 14:07:36 IST 2025
-# Syntax fix completed Tue Jul 29 14:08:49 IST 2025
-# Syntax errors fixed Tue Jul 29 14:10:39 IST 2025
-# Vercel deployment fixes Tue Jul 29 14:12:59 IST 2025
+This is a client-only app — there's no backend. It calls the TMDB API directly from the browser, which means the API key is bundled into the client (standard for a personal/portfolio project, but not how you'd ship this for production use at scale).
+
+## Getting started
+
+1. **Clone and install:**
+   ```bash
+   git clone https://github.com/Siddhanta22/swipeflix.git
+   cd swipeflix
+   npm install
+   ```
+
+2. **Get a TMDB API key** — free, from [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api).
+
+3. **Create a `.env` file** in the project root:
+   ```
+   VITE_TMDB_API_KEY=your_api_key_here
+   ```
+
+4. **Run the dev server:**
+   ```bash
+   npm run dev
+   ```
+   Open the printed `localhost` URL.
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the Vite dev server |
+| `npm run build` | Production build to `dist/` |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Run ESLint |
+
+## Project structure
+
+```
+src/
+  App.jsx          # Main app: filters, fetch/sort pipeline, watchlist, layout
+  quizflow.jsx      # Onboarding quiz
+  SwipeCard.jsx     # Swipeable card: gestures, image gallery, provider links
+  Recap.jsx         # Session recap (Wrapped-style summary)
+  PlatformLogos.jsx # Streaming service logo icons
+  FloatingIcons.jsx # Ambient background animation
+  storage.js        # localStorage helpers (watchlist)
+```
