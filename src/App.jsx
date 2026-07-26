@@ -326,8 +326,31 @@ export default function App() {
           results = results.filter(m => m.media_type === 'tv');
         }
       }
-      // Fetch certifications and providers for each result
-      const withCertsAndProviders = await Promise.all(results.map(async (m) => {
+      // Dedupe by TMDB id *before* the expensive per-title lookups below —
+      // the same title often shows up in multiple source lists (trending,
+      // popular, top-rated), and fetching its certification/providers twice
+      // is pure waste.
+      const seenResultIds = new Set();
+      const dedupedResults = [];
+      for (const m of results) {
+        if (!seenResultIds.has(m.id)) {
+          seenResultIds.add(m.id);
+          dedupedResults.push(m);
+        }
+      }
+      // Apply the filters that don't need extra API calls (release date,
+      // min rating — both already present on the raw TMDB result) before
+      // the per-title fetch, so we're not fetching certification/providers
+      // for titles we're about to throw away anyway.
+      const now = new Date();
+      const cheapFiltered = dedupedResults.filter(m => {
+        const releaseDate = new Date(m.release_date || m.first_air_date || '1900-01-01');
+        if (releaseDate > now) return false;
+        if (minRating > 0 && (m.vote_average || 0) < minRating) return false;
+        return true;
+      });
+      // Fetch certifications and providers only for titles that survived the cheap filters above
+      const withCertsAndProviders = await Promise.all(cheapFiltered.map(async (m) => {
         let certification = '';
         try {
           if (m.media_type === 'movie') {
@@ -373,14 +396,11 @@ export default function App() {
         }
         return { ...m, certification, genres: genresArr, providers: usProviders };
       }));
-      // Only include released movies with streaming providers, meeting the
-      // minimum rating and age-certification filters
-      const now = new Date();
+      // Only include titles with streaming providers, meeting the
+      // age-certification filter (release date and min rating were already
+      // applied above, before the per-title fetch)
       const filtered = withCertsAndProviders.filter(m => {
-        const releaseDate = new Date(m.release_date || m.first_air_date || '1900-01-01');
-        if (releaseDate > now) return false;
         if (!m.providers || !Array.isArray(m.providers) || m.providers.length === 0) return false;
-        if (minRating > 0 && (m.vote_average || 0) < minRating) return false;
         if (selectedCertification.length > 0 && !selectedCertification.includes(m.certification)) return false;
         return true;
       });
@@ -398,16 +418,8 @@ export default function App() {
       filteredByPlatform.sort((a, b) =>
         computeQuizScore(b, quizAnswers, preferredGenres) - computeQuizScore(a, quizAnswers, preferredGenres)
       );
-      // Remove duplicates by TMDB id
-      const unique = [];
-      const seen = new Set();
-      for (const m of filteredByPlatform) {
-        if (!seen.has(m.id)) {
-          seen.add(m.id);
-          unique.push(m);
-        }
-      }
-      setPendingResults(shuffleArray(unique));
+      // (already deduped by id before the expensive per-title fetch, above)
+      setPendingResults(shuffleArray(filteredByPlatform));
       setHasInitiallyLoaded(true);
       setIsLoading(false);
       clearTimeout(timeoutId); // Clear timeout on success
